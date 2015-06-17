@@ -1,0 +1,281 @@
+[Version] geofence-server_0.3.9
+[date] 24 December 2014
+[Title] Fence name has been added in the geofence server module
+[Issue#] NA
+[Problem] NA
+[Cause] New feature need to added to give name to the fences
+[Solution] Fence name has been added in all the module
+[Developer] Karthik Paulraj <p.karthik@samsung.com>
+
+=============================================================================
+
+[Version] geofence-server_0.3.8
+[date] 20 December 2014
+[Title] Bugs related to fence alerts are fixed. Optimization done in BT/WIFI discovery callbacks
+[Issue#] NA
+[Problem] Alerting multiple times, callbacks executed multiple times
+[Cause] Alerts were coming multiple times from different callbacks.
+[Solution] Code modified to maintian previous status and alerts happens properly.
+[Developer] Karthik Paulraj <p.karthik@samsung.com>
+
+=============================================================================
+
+[Version] geofence-server_0.3.7
+[date] 19 December 2014
+[Title] [Workaround] Changed get_list to read fence information from DB.
+[Issue#] NA
+[Problem] DB read and list issue
+[Cause] DB write was not heppening properly. So get_list failed.
+[Solution] Modified the DB write logic
+[Developer] YoungAe Kang <youngae.kang@samsung.com>
+
+==============================================================================
+
+[Version] geofence-server_0.3.6
+[date] 03 December 2014
+[Title] Wifi/BT implementation changed
+[Issue#] NA
+[Problem] Privacy and implementation issue
+[Cause] Wifi/BT was switched on automatically without user concern
+[Solution] Completely modified the Wifi/BT implementation
+[Developer] Karthik Paulraj <p.karthik@samsung.com>
+
+===============================================================================
+
+[Version] geofence-server_0.3.5
+[date] 24 September 2014
+[Title] Remove libnps-plugin dependency
+[Issue#] NA
+[Problem] Build Error
+[Cause] need capi-network-connetion by libnps-plugin
+[Solution] Remove libnps-plugin dependency
+[Developer] Kisun SHIN <kisun47.shin@samsung.com>
+
+================================================================================
+
+
+[Version] geofence-server_0.3.4
+[date] 24 September 2014
+[Title] Rollback ver 3.3
+[Issue#] NA
+[Problem] request to rollback.
+[Cause] build error
+[Solution] rollback the code
+[Developer] Kisun SHIN <kisun47.shin@samsung.com>
+
+================================================================================
+
+[Version] geofence-server_0.3.3
+[date] 23 September 2014
+[Title] add dependency for libnps-plugin
+[Issue#] NA
+[Problem] fail to install geofence-server package
+[Cause] dependency problem
+[Solution] add dependency in spec file
+[Developer] Kisun SHIN <kisun47.shin@samsung.com>
+
+================================================================================
+
+[Version] geofence-server_0.3.2
+[date] 17 September 2014
+[Title] change the related function name.
+[Issue#] NA
+[Problem] build error occurred.
+[Cause] change the telephony gps function name
+[Solution] change the name
+[Developer] Kisun SHIN <kisun47.shin@samsung.com>
+
+================================================================================
+[Version] geofence-server_0.3.1
+[date] 8 July 2014
+[Title] encrypt DB data
+[Issue#] NA
+[Problem] encrypt DB data
+[Cause] NA
+[Solution] NA
+[Developer] Areum Choi <arumi.choi@samsung.com>
+
+================================================================================
+
+[Version] geofence-server_0.2.5
+[date] 6 July 2014
+[Title] fix sqlite3 error
+[Issue#] 02175
+[Problem] fix sqlite3 error
+[Cause] NA
+[Solution] NA
+[Developer] Areum Choi <arumi.choi@samsung.com>
+
+================================================================================
+
+[Version] geofence-server_0.2.4
+[date] 3 July 2014
+[Title] delete logs for location infomation
+[Issue#] NA
+[Problem] delete logs for location infomation
+[Cause] NA
+[Solution] NA
+[Developer] Areum Choi <arumi.choi@samsung.com>
+
+================================================================================
+
+[Version] geofence-server_0.2.3
+[date] 2 July 2014
+[Title] geofence event is not called from NPS
+[Issue#] NA
+[Problem] fail to notify geofence event from NPS
+[Cause] cell_status set CELL_OUT, not UNKNOWN
+[Solution] remove the condition of checking NPS event
+[Developer] Wooyoung Kim <woo02.kim@samsung.com>
+
+================================================================================
+
+[Version] geofence-server_0.2.2
+[date] 30 June 2014
+[Title] Do not return fail when WIFI doesn't connect during starting geofence
+[Issue#] NA
+[Problem] fail to start geofence when WIFI doesn't connect
+[Cause] return fail when WIFI doesn't connect during starting geofence
+[Solution] Do not return fail when WIFI doesn't connect during starting geofence
+[Developer] Wooyoung Kim <woo02.kim@samsung.com>
+
+================================================================================
+
+[Version] geofence-server_0.2.1
+[date] 27 June 2014
+[Title] handle geofence client status for bt/wifi geofence
+[Issue#] NA
+[Problem] geofence event is called even user stop geofence
+[Cause] miss handling geofence client status
+[Solution] handle geofence client status for bt/wifi geofence
+[Developer] Wooyoung Kim <woo02.kim@samsung.com>
+
+================================================================================
+[Version] geofence-server_0.2.0
+[date] 25 June 2014
+[Title] separate create / destoy and start / stop client
+[Issue#] NA
+[Problem] got the error when destroyed
+[Cause] object is not freed
+[Solution] separate create / destoy and start / stop client, free the object in geofence module
+[Developer] Kisun SHIN <kisun47.shin@samsung.com>
+
+================================================================================
+
+[Version] geofence-server_0.1.11
+[date] 20 June 2014
+[Title] Remove geofence log
+[Issue#] NA
+[Problem] unnecessary logs
+[Cause] should not exist geofence log file in opt/usr/media
+[Solution] remove geofence log
+[Developer] Kisun SHIN <kisun47.shin@samsung.com>
+
+================================================================================
+
+[Version] geofence-server_0.1.10
+[date] 19 June 2014
+[Title] Disable Cell Geofence
+[Issue#] NA
+[Problem] unnecessary logs
+[Cause] not use cell geofence
+[Solution] comment out cell geofence
+[Developer] Kisun SHIN <kisun47.shin@samsung.com>
+
+================================================================================
+
+[Version] geofence-server_0.1.9
+[date] 19 June 2014
+[Title] start nps whenever geofence is started firstly
+[Issue#] NA
+[Problem] start nps whenever geofence is started firstly
+[Cause] start nps whenever geofence is started firstly
+[Solution] start nps whenever geofence is started firstly
+[Developer] Wooyoung Kim <woo02.kim@samsung.com>
+
+================================================================================
+
+[Version] geofence-server_0.1.8
+[date] 16 June 2014
+[Title] add dependency for lbs-server
+[Issue#] NA
+[Problem] fail to install geofence-server package
+[Cause] dependency problem
+[Solution] add dependency in spec file
+[Developer] Wooyoung Kim <woo02.kim@samsung.com>
+
+================================================================================
+[Version] geofence-server_0.1.7
+[date] 28 May 2014
+[Title] add new geofence id upper 3
+[Issue#] NA
+[Problem] cannot add new fence id upper 3
+[Cause] wrong GList is added on next fence id.
+[Solution] Fix correct GList
+[Developer] Kisun SHIN <kisun47.shin@samsung.com>
+
+================================================================================
+
+[Version] geofence-server_0.1.6
+[date] 27 May 2014
+[Title] Remoce cb in start / Add cb in create
+[Issue#] NA
+[Problem] multi callback when multi geofence
+[Cause] Whenever start, callback is registered.
+[Solution] register the callback when create once.
+[Developer] Kisun SHIN <kisun47.shin@samsung.com>
+
+================================================================================
+
+[Version] geofence-server_0.1.5
+[date] 26 May 2014
+[Title] add wifi/bt geofence
+[Issue#] NA
+[Problem] NA
+[Cause] NA
+[Solution] add wifi/bt geofence
+[Developer] Bosung Kwak <bosung.kwak@samsung.com>
+
+================================================================================
+[Version] geofence-server_0.1.4
+[date] 22 May 2014
+[Title] add SensorHub function
+[Issue#] NA
+[Problem] NA
+[Cause] NA
+[Solution] add SensorHub function
+[Developer] Wooyoung Kim <woo02@samsung.com>
+
+================================================================================
+[Version] geofence-server_0.1.3
+[date] 21 May 2014
+[Title] Matching Fence state between plugin and geofence-server
+[Issue#] NA
+[Problem] NA
+[Cause] NA
+[Solution] NA 
+[Developer] Kisun Shin <kisun47.shin@samsung.com>
+
+================================================================================
+[Version] geofence-server_0.1.2
+[date] 16 May 2014
+[Title] Optimize DB and fix ID incrementing
+[Issue#] NA
+[Problem] NA
+[Cause] NA
+[Solution] NA 
+[Developer] Areum Choi <arumi.choi@samsung.com>
+
+================================================================================
+
+[Version] geofence-server_0.1.1
+[date] 12 May 2014
+[Title] Git update
+[Issue#] NA
+[Problem] NA
+[Cause] NA
+[Solution] NA 
+[Developer] Areum Choi <arumi.choi@samsung.com>
+
+================================================================================
+

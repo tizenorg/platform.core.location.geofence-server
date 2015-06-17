@@ -1,0 +1,8 @@
+[Geofence Server Provider]
+Name=Geofence
+Service=org.tizen.lbs.Providers.GeofenceServer
+Path=/org/tizen/lbs/Providers/GeofenceServer
+#Requires=RequiresXXX
+Provides=ProvidesUpdates
+#Accuracy=Detailed
+Interfaces=org.tizen.lbs.Geofence

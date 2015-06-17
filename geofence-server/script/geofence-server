@@ -1,0 +1,11 @@
+#!/bin/sh
+##/etc/init.d/geofence-manager Lv : S90
+
+## This file is boot script of /usr/libexec/geofence-server
+
+if [ -x /usr/libexec/geofence-server ]; then
+	if [ ! -z "`pgrep geofence-server`" ]; then
+		killall geofence-server
+	fi
+	/usr/libexec/geofence-server &
+fi
