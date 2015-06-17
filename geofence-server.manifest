@@ -1,0 +1,18 @@
+<manifest>
+	<assign>
+		<filesystem path="/usr/bin/geofence-server" label="_" exec_label="location_fw" />
+		<filesystem path="/usr/share/dbus-1/system-services/org.tizen.lbs.Providers.GeofenceServer.service" label="_" />
+		<filesystem path="/opt/dbspace/.geofence-server.db" label="location_fw::geofence" />
+		<filesystem path="/opt/dbspace/.geofence-server.db-journal" label="location_fw::geofence" />
+		<dbus name="org.tizen.lbs.Providers.GeofenceServer" own="location_fw" bus="system">
+			<node name="/org/tizen/lbs/Providers/GeofenceServer">
+				<interface name="org.tizen.lbs.Geofence">
+					<annotation name="com.tizen.smack" value="location_fw::client"/>
+				</interface>
+			</node>
+		</dbus>
+	</assign>
+	<request>
+		<domain name="location_fw" />
+	</request>
+</manifest>
