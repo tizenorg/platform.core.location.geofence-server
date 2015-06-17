@@ -1,0 +1,15 @@
+[Unit]
+Description=Geofence server daemon
+After=tizen-runtime.target
+Requires=tizen-runtime.target
+
+[Service]
+Type=forking
+ExecStart=/etc/rc.d/rc5.d/S91geofence-server
+MemoryLimit=10M
+User=system
+Group=system
+SmackProcessLabel=location_fw
+
+[Install]
+WantedBy=multi-user.target
