@@ -23,7 +23,6 @@
 #define __GEOFENCE_MANAGER_PRIVATE_H__
 
 #include <geofence_dbus_server.h>
-#include "geofence-module.h"
 #include <locations.h>
 #include <alarm.h>
 #include <network-wifi-intf.h>
@@ -38,8 +37,8 @@ extern "C" {
 
 /** Length of bssid */
 #define WLAN_BSSID_LEN	18
-#define APP_ID_LEN	64
-#define ADDRESS_LEN	64
+#define APP_ID_LEN		64
+#define ADDRESS_LEN		64
 #define PLACE_NAME_LEN	64
 
 /**
@@ -87,7 +86,6 @@ typedef struct {
 	char ssid[WLAN_BSSID_LEN];
 } geofence_s;
 
-/* This can be substituded to GeofenceData*/
 typedef struct _geofence_info_s {
 	int fence_id;
 	char app_id[APP_ID_LEN];
@@ -132,14 +130,16 @@ typedef struct {
 typedef struct {
 	GMainLoop *loop;
 	geofence_dbus_server_h geofence_dbus_server;
-	GList *geofence_list;	/* list of GeofenceData for multi clients */
+	GList *geofence_list;	/* list of geofence list for multi clients */
 	GList *tracking_list;	/* list of geofence ids for tracking */
 	time_t last_loc_time;
 	time_t last_result_time;
 	int running_geopoint_cnt;
 	int running_bt_cnt;
 	int running_wifi_cnt;
+#if USE_HW_GEOFENCE
 	GeofenceModCB geofence_cb;
+#endif
 	gpointer userdata;
 	/* for Geometry's GPS positioning*/
 	location_manager_h loc_manager;

@@ -48,7 +48,7 @@ void _init_log()
 	if (cur_time != NULL)
 		sprintf(buf, "[%02d:%02d:%02d] -- START -- \n", cur_time->tm_hour, cur_time->tm_min, cur_time->tm_sec);
 	LOGI_GEOFENCE("BUF[%s]", buf);
-/*      write(fd, buf, strlen(buf));*/
+	/*      write(fd, buf, strlen(buf));*/
 }
 
 void _deinit_log()
@@ -61,7 +61,7 @@ void _deinit_log()
 	if (cur_time != NULL)
 		sprintf(buf, "[%02d:%02d:%02d] -- END -- \n", cur_time->tm_hour, cur_time->tm_min, cur_time->tm_sec);
 	LOGI_GEOFENCE("BUF[%s]", buf);
-/*      write(fd, buf, strlen(buf));*/
+	/*      write(fd, buf, strlen(buf));*/
 
 	close(fd);
 	fd = -1;
@@ -78,6 +78,6 @@ void _print_log(const char *str)
 		sprintf(buf, "[%02d:%02d:%02d] %s\n", cur_time->tm_hour, cur_time->tm_min, cur_time->tm_sec, str);
 
 	LOGI_GEOFENCE("BUF %s", buf);
-/*      write(fd, buf, strlen(buf));*/
+	/*      write(fd, buf, strlen(buf));*/
 }
 

@@ -1,6 +1,6 @@
 Name:       geofence-server
 Summary:    Geofence Server for Tizen
-Version:    0.3.9
+Version:    0.4.0
 Release:    1
 Group:      Location/Service
 License:    Apache-2.0
@@ -16,7 +16,6 @@ Requires(post):	lbs-server
 BuildRequires:  cmake
 BuildRequires:  pkgconfig(glib-2.0)
 BuildRequires:  pkgconfig(network)
-#BuildRequires:  pkgconfig(tapi)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(dlog)
 BuildRequires:  pkgconfig(geofence-dbus)
@@ -29,33 +28,20 @@ BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(vconf-internal-keys)
 BuildRequires:  pkgconfig(capi-appfw-app-manager)
 BuildRequires:  pkgconfig(capi-location-manager)
-#BuildRequires:  pkgconfig(capi-geofence-manager)
-#BuildRequires: pkgconfig(capi-telephony-network-info)
-BuildRequires: pkgconfig(capi-network-wifi)
-BuildRequires: pkgconfig(capi-network-bluetooth)
-#BuildRequires: pkgconfig(capi-context-manager)
-BuildRequires: pkgconfig(secure-storage)
-BuildRequires: pkgconfig(libcore-context-manager)
+BuildRequires:  pkgconfig(capi-network-wifi)
+BuildRequires:  pkgconfig(capi-network-bluetooth)
+BuildRequires:  pkgconfig(secure-storage)
+BuildRequires:  pkgconfig(libcore-context-manager)
+#BuildRequires:  pkgconfig(tapi)
+#BuildRequires:  pkgconfig(capi-telephony-network-info)
+#BuildRequires:  pkgconfig(capi-context-manager)
+BuildRequires:  pkgconfig(capi-geofence-manager)
+BuildRequires:  capi-geofence-manager-plugin-devel
 Requires:  sys-assert
 
 %description
 Geofence Server for Tizen
 
-%package -n location-geofence-server
-Summary:    Geofence Server for Tizen
-Group:      Location/Libraries
-Requires:   %{name} = %{version}-%{release}
-
-%description -n location-geofence-server
-Geofence Server for Tizen
-
-%package -n geofence-server-devel
-Summary:    Geofence Server for Tizen (Development)
-Group:      Location/Development
-Requires:   %{name} = %{version}-%{release}
-
-%description -n geofence-server-devel
-Geofence Server for Tizen (Development)
 
 %prep
 %setup -q
@@ -111,6 +97,20 @@ chmod 660 /opt/dbspace/.geofence-server.db-journal
 /usr/share/dbus-1/system-services/org.tizen.lbs.Providers.GeofenceServer.service
 /opt/dbspace/.*.db*
 %config %{_sysconfdir}/dbus-1/system.d/geofence-server.conf
+
+%package -n location-geofence-server
+Summary:    Geofence Server for Tizen
+Group:      Development/Libraries
+Requires:   %{name} = %{version}-%{release}
+
+%description -n location-geofence-server
+Geofence Server for Tizen
+
+%post -n location-geofence-server
+/sbin/ldconfig
+
+%postun -n location-geofence-server
+/sbin/ldconfig
 
 %files -n location-geofence-server
 %manifest location-geofence-server.manifest

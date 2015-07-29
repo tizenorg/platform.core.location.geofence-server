@@ -31,9 +31,8 @@
 #define GEOFENCE_SERVER_DB_FILE		".geofence-server.db"
 #define GEOFENCE_SERVER_DB_PATH		"/opt/dbspace/"GEOFENCE_SERVER_DB_FILE
 
-#define FENCE_SQL_LEN_MAX	256
 #define MAX_DATA_NAME		20
-#define DATA_LEN		20
+#define DATA_LEN			20
 
 #define GEOFENCE_INVALID	0
 
@@ -46,10 +45,10 @@ const char *col_longitude = "lo";
 const char *col_radius = "r";
 
 typedef enum {
-	FENCE_MAIN_TABLE = 0,	/*GeoFence */
-	FENCE_GEOCOORDINATE_TAB,	/*FenceGeocoordinate */
-	FENCE_GEOPOINT_WIFI_TABLE,	/*FenceCurrentLocation */
-	FENCE_BSSID_TABLE	/*FenceBluetoothBssid */
+    FENCE_MAIN_TABLE = 0,	/*GeoFence */
+    FENCE_GEOCOORDINATE_TAB,	/*FenceGeocoordinate */
+    FENCE_GEOPOINT_WIFI_TABLE,	/*FenceCurrentLocation */
+    FENCE_BSSID_TABLE	/*FenceBluetoothBssid */
 } fence_table_type_e;
 
 static struct {
@@ -59,13 +58,13 @@ static struct {
 };
 
 #define SQLITE3_RETURN(ret, msg, state) \
-		if (ret != SQLITE_OK) { \
-			LOGI_GEOFENCE("sqlite3 Error[%d] : %s", ret, msg); \
-			sqlite3_reset(state); \
-			sqlite3_clear_bindings(state); \
-			sqlite3_finalize(state); \
-			return FENCE_ERR_SQLITE_FAIL; \
-		}
+	if (ret != SQLITE_OK) { \
+		LOGI_GEOFENCE("sqlite3 Error[%d] : %s", ret, msg); \
+		sqlite3_reset(state); \
+		sqlite3_clear_bindings(state); \
+		sqlite3_finalize(state); \
+		return FENCE_ERR_SQLITE_FAIL; \
+	}
 
 /*
  * \note
@@ -337,7 +336,7 @@ static int __geofence_manager_db_insert_bssid_info(const int fence_id, const cha
 	char *bssid = NULL;
 
 	char *query = sqlite3_mprintf("INSERT INTO %Q(fence_id, bssid, ssid) VALUES (?, ?, ?)", menu_table[FENCE_BSSID_TABLE]);
-	bssid = (char *)g_malloc0(sizeof(char)*WLAN_BSSID_LEN);
+	bssid = (char *)g_malloc0(sizeof(char) * WLAN_BSSID_LEN);
 	g_strlcpy(bssid, bssid_info, WLAN_BSSID_LEN);
 	LOGI_GEOFENCE("fence_id[%d], bssid[%s], ssid[%s]", fence_id, bssid, ssid);
 
@@ -401,7 +400,7 @@ static int __geofence_manager_db_insert_wifi_data_info(gpointer data, gpointer u
 	const char *tail;
 	char *bssid = NULL;
 	wifi_info = (wifi_info_s *) data;
-	bssid = (char *)g_malloc0(sizeof(char)*WLAN_BSSID_LEN);
+	bssid = (char *)g_malloc0(sizeof(char) * WLAN_BSSID_LEN);
 	g_strlcpy(bssid, wifi_info->bssid, WLAN_BSSID_LEN);
 	LOGI_GEOFENCE("fence_id[%d] bssid[%s]", *fence_id, wifi_info->bssid);
 
@@ -734,9 +733,9 @@ int geofence_manager_set_place_info(place_info_s *place_info, int *place_id)
 	char *place_name = NULL;
 	char *query = sqlite3_mprintf("INSERT INTO Places (access_type, place_name, app_id) VALUES (?, ?, ?)");
 
-	place_name = (char *)g_malloc0(sizeof(char)*PLACE_NAME_LEN);
+	place_name = (char *)g_malloc0(sizeof(char) * PLACE_NAME_LEN);
 	g_strlcpy(place_name, place_info->place_name, PLACE_NAME_LEN);
-	appid = (char *)g_malloc0(sizeof(char)*APP_ID_LEN);
+	appid = (char *)g_malloc0(sizeof(char) * APP_ID_LEN);
 	g_strlcpy(appid, place_info->appid, APP_ID_LEN);
 
 	ret = sqlite3_prepare_v2(db_info_s.handle, query, -1, &state, &tail);
@@ -793,7 +792,7 @@ int geofence_manager_set_common_info(fence_common_info_s *fence_info, int *fence
 	const char *tail;
 	char *appid = NULL;
 	char *query = sqlite3_mprintf("INSERT INTO GeoFence (place_id, enable, app_id, geofence_type, access_type, running_status) VALUES (?, ?, ?, ?, ?, ?)");
-	appid = (char *)g_malloc0(sizeof(char)*APP_ID_LEN);
+	appid = (char *)g_malloc0(sizeof(char) * APP_ID_LEN);
 	g_strlcpy(appid, fence_info->appid, APP_ID_LEN);
 
 	ret = sqlite3_prepare_v2(db_info_s.handle, query, -1, &state, &tail);
@@ -1054,7 +1053,7 @@ int geofence_manager_update_place_info(int place_id, const char *place_info_name
 	int ret = SQLITE_OK;
 	char *place_name = NULL;
 
-	place_name = (char *)g_malloc0(sizeof(char)*PLACE_NAME_LEN);
+	place_name = (char *)g_malloc0(sizeof(char) * PLACE_NAME_LEN);
 	g_strlcpy(place_name, place_info_name, PLACE_NAME_LEN);
 
 	char *query = sqlite3_mprintf("UPDATE Places SET place_name = %Q where place_id = %d", place_name, place_id);
@@ -1134,7 +1133,7 @@ int geofence_manager_set_geocoordinate_info(int fence_id, geocoordinate_info_s *
 		__geofence_manager_genarate_password(password);
 
 	/* ssa_put : latitude*/
-	ret = snprintf(data_name_lat, DATA_LEN, "%lf", geocoordinate_info->latitude);
+	ret = snprintf(data_name_lat, MAX_DATA_NAME, "%lf", geocoordinate_info->latitude);
 
 	ret = sqlite3_bind_text(state, ++index, data_name_lat, -1, SQLITE_STATIC);
 
@@ -1221,7 +1220,7 @@ int geofence_manager_get_geocoordinate_info(int fence_id, geocoordinate_info_s *
 
 	*geocoordinate_info = (geocoordinate_info_s *)g_malloc0(sizeof(geocoordinate_info_s));
 	g_return_val_if_fail(*geocoordinate_info, FENCE_ERR_INVALID_PARAMETER);
-	
+
 	if (password == NULL)
 		__geofence_manager_genarate_password(password);
 

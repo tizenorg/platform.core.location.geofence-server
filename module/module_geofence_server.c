@@ -24,150 +24,124 @@
 #include <app_manager.h>
 #include <dlfcn.h>
 #include <geofence_client.h>
-#include "module_internal.h"
+#include <geofence_module.h>
 #include "log.h"
-
-#define GEOFENCE_MODULE_API __attribute__((visibility("default"))) G_MODULE_EXPORT
-#define MYPLACES_APP_ID  "org.tizen.myplace"
-
-/**
- * This enumeration descript the geofence type.
- * Should be SYNC to geofence_mananger_data_types.h
- */
-typedef enum {
-	GEOFENCE_SERVER_TYPE_INVALID = 0,
-	GEOFENCE_SERVER_TYPE_GEOPOINT = 1,
-	GEOFENCE_SERVER_TYPE_WIFI,
-	GEOFENCE_SERVER_TYPE_BT
-} geofence_server_type_e;
-
-/**
- * Enumerations of the geofence bssid type.
- */
-typedef enum {
-	GEOFENCE_BSSID_TYPE_WIFI = 0,
-	GEOFENCE_BSSID_TYPE_BT
-} geofence_bssid_type_e;
-
-#define GEOFENCE_STATE_UNCERTAIN	0
-#define GEOFENCE_STATE_IN		1
-#define GEOFENCE_STATE_OUT		2
-#define _WLAN_BSSID_LEN			18/* bssid 17 + "null"*/
-
-typedef struct {
-	int enabled;
-	int geofence_type;
-	gint geofence_id;
-	gdouble latitude;
-	gdouble longitude;
-	gint radius;
-	char bssid[_WLAN_BSSID_LEN];
-} GeofenceData;
-
-typedef struct {
-	geofence_client_dbus_h geofence_client;
-	GList *geofence_list;
-	GeofenceModCB geofence_cb;
-	GeofenceModEventCB geofence_event_cb;
-	gpointer userdata;
-} GeofenceManagerData;
 
 #define GEOFENCE_SERVER_SERVICE_NAME	"org.tizen.lbs.Providers.GeofenceServer"
 #define GEOFENCE_SERVER_SERVICE_PATH	"/org/tizen/lbs/Providers/GeofenceServer"
 
-GEOFENCE_MODULE_API int add_geopoint(void *handle, int place_id, double latitude, double longitude, int radius, const char *address, int *fence_id)
+#define MYPLACES_APP_ID  "org.tizen.myplace"
+
+typedef enum {
+    ACCESS_TYPE_PRIVATE = 1,
+    ACCESS_TYPE_PUBLIC,
+    ACCESS_TYPE_UNKNOWN,
+} access_type_e;
+
+typedef struct {
+	geofence_client_dbus_h geofence_client;
+	GeofenceModCB geofence_cb;
+	GeofenceModEventCB geofence_event_cb;
+	gchar *app_id;
+	gpointer userdata;
+} GeofenceManagerData;
+
+EXPORT_API int add_geopoint(void *handle, int place_id, double latitude, double longitude, int radius, const char *address, int *fence_id)
 {
 	MOD_LOGD("add_geopoint");
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *)handle;
-	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_EXCEPTION);
-	int geofence_id = -1;
+	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
+	int new_fence_id = -1;
 
-	geofence_id = geo_client_add_geofence(geofence_manager->geofence_client, place_id, GEOFENCE_TYPE_GEOPOINT, latitude, longitude, radius, address, "", "");
-	if (geofence_id == -1)
-		return GEOFENCE_MANAGER_ERROR_EXCEPTION;
-	*fence_id = geofence_id;
+	new_fence_id = geo_client_add_geofence(geofence_manager->geofence_client, geofence_manager->app_id, place_id, GEOFENCE_TYPE_GEOPOINT, latitude, longitude, radius, address, "", "");
+	*fence_id = new_fence_id;
+
+	if (new_fence_id == -1)
+		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
 }
 
-GEOFENCE_MODULE_API int add_bssid(void *handle, int place_id, const char *bssid, const char *ssid, geofence_type_e type, int *fence_id)
+EXPORT_API int add_bssid(void *handle, int place_id, const char *bssid, const char *ssid, geofence_type_e type, int *fence_id)
 {
 	MOD_LOGD("add_bssid");
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *)handle;
-	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_EXCEPTION);
-	int geofence_id = -1;
+	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
+	int new_fence_id = -1;
 
-	geofence_id = geo_client_add_geofence(geofence_manager->geofence_client, place_id, type, -1, -1, -1, "", bssid, ssid);
-	if (geofence_id == -1)
-		return GEOFENCE_MANAGER_ERROR_EXCEPTION;
-	*fence_id = geofence_id;
+	new_fence_id = geo_client_add_geofence(geofence_manager->geofence_client, geofence_manager->app_id, place_id, type, -1, -1, -1, "", bssid, ssid);
+	*fence_id = new_fence_id;
+
+	if (new_fence_id == -1)
+		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
 }
 
-GEOFENCE_MODULE_API int add_place(void *handle, const char *place_name,	int *place_id)
+EXPORT_API int add_place(void *handle, const char *place_name, int *place_id)
 {
 	MOD_LOGD("add_place");
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *)handle;
-	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_EXCEPTION);
-	int placeid = -1;
+	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
+	int new_place_id = -1;
 
-	placeid = geo_client_add_place(geofence_manager->geofence_client, place_name);
-	if (placeid == -1)
-		return GEOFENCE_MANAGER_ERROR_EXCEPTION;
-	*place_id = placeid;
+	new_place_id = geo_client_add_place(geofence_manager->geofence_client, geofence_manager->app_id, place_name);
+	*place_id = new_place_id;
+
+	if (new_place_id == -1)
+		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
 }
 
-GEOFENCE_MODULE_API int update_place(void *handle, int place_id, const char *place_name)
+EXPORT_API int update_place(void *handle, int place_id, const char *place_name)
 {
 	MOD_LOGD("update_place");
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *)handle;
-	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_EXCEPTION);
+	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
 
-	int ret = geo_client_update_place(geofence_manager->geofence_client, place_id, place_name);
+	int ret = geo_client_update_place(geofence_manager->geofence_client, geofence_manager->app_id, place_id, place_name);
 	if (ret != GEOFENCE_CLIENT_ERROR_NONE)
-		return GEOFENCE_MANAGER_ERROR_EXCEPTION;
+		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
 }
 
-GEOFENCE_MODULE_API int remove_geofence(void *handle, int fence_id)
+EXPORT_API int remove_geofence(void *handle, int fence_id)
 {
 	MOD_LOGD("remove_geofence");
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *)handle;
-	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_EXCEPTION);
+	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
 
-	int ret = geo_client_delete_geofence(geofence_manager->geofence_client, fence_id);
+	int ret = geo_client_delete_geofence(geofence_manager->geofence_client, geofence_manager->app_id, fence_id);
 	if (ret != GEOFENCE_CLIENT_ERROR_NONE)
-		return GEOFENCE_MANAGER_ERROR_EXCEPTION;
+		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
 }
 
-GEOFENCE_MODULE_API int remove_place(void *handle, int place_id)
+EXPORT_API int remove_place(void *handle, int place_id)
 {
 	MOD_LOGD("remove_place");
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *)handle;
-	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_EXCEPTION);
+	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
 
-	int ret = geo_client_delete_place(geofence_manager->geofence_client, place_id);
+	int ret = geo_client_delete_place(geofence_manager->geofence_client, geofence_manager->app_id, place_id);
 	if (ret != GEOFENCE_CLIENT_ERROR_NONE)
-		return GEOFENCE_MANAGER_ERROR_EXCEPTION;
+		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
 }
 
-GEOFENCE_MODULE_API int enable_service(void *handle, int fence_id, bool enable)
+EXPORT_API int enable_service(void *handle, int fence_id, bool enable)
 {
 	MOD_LOGD("enable_service");
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *)handle;
-	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_EXCEPTION);
+	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
 
-	int ret = geo_client_enable_service(geofence_manager->geofence_client, fence_id, enable);
+	int ret = geo_client_enable_geofence(geofence_manager->geofence_client, geofence_manager->app_id, fence_id, enable);
 	if (ret != GEOFENCE_CLIENT_ERROR_NONE)
-		return GEOFENCE_MANAGER_ERROR_EXCEPTION;
+		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
 }
@@ -178,22 +152,11 @@ static void geofence_callback(GVariant *param, void *user_data)
 	GeofenceManagerData *geofence_manager =	(GeofenceManagerData *)user_data;
 	int fence_id, access_type, state;
 	char *app_id = NULL;
-	pid_t pid = 0;
-	char *appid_from_app = NULL;
+
 	g_variant_get(param, "(siii)", &app_id, &fence_id, &access_type, &state);
 
-	MOD_LOGI("Getting the app id");
-	pid = getpid();
-	int ret = app_manager_get_app_id(pid, &appid_from_app);
-	if (ret != APP_MANAGER_ERROR_NONE) {
-		MOD_LOGE("Fail to get app_id from module_geofence_server. Err[%d]", ret);
-		return;
-	}
-	MOD_LOGI("APP ID from server : %s", app_id);
-	MOD_LOGI("APP ID from app manager : %s", appid_from_app);
-
 	if (access_type == ACCESS_TYPE_PRIVATE) {
-		if (!(g_strcmp0(appid_from_app, app_id))) {	/*Sending the alert only the app-id matches in case of private fence*/
+		if (!(g_strcmp0(geofence_manager->app_id, app_id))) {	/*Sending the alert only the app-id matches in case of private fence*/
 			if (geofence_manager->geofence_cb)
 				geofence_manager->geofence_cb(fence_id, state, geofence_manager->userdata);
 		}
@@ -201,10 +164,6 @@ static void geofence_callback(GVariant *param, void *user_data)
 		if (geofence_manager->geofence_cb)	/*Here filteration is done in the manager as public fences cannot be restricted/filtered.*/
 			geofence_manager->geofence_cb(fence_id, state, geofence_manager->userdata);
 	}
-	if (appid_from_app)
-		g_free(appid_from_app);
-	if (app_id)
-		g_free(app_id);
 }
 
 static void geofence_event_callback(GVariant *param, void *user_data)
@@ -213,63 +172,46 @@ static void geofence_event_callback(GVariant *param, void *user_data)
 	GeofenceManagerData *geofence_manager =	(GeofenceManagerData *)user_data;
 	int place_id, fence_id, access_type, error, state;
 	char *app_id = NULL;
-	pid_t pid = 0;
-	char *appid = NULL;
+
 	g_variant_get(param, "(iiisii)", &place_id, &fence_id, &access_type, &app_id, &error, &state);
 
-	MOD_LOGI("Getting the app id");
-	pid = getpid();
-	int ret = app_manager_get_app_id(pid, &appid);
-	if (ret != APP_MANAGER_ERROR_NONE) {
-		MOD_LOGE("Fail to get app_id from module_geofence_server. Err[%d]", ret);
-		return;
-	}
-	MOD_LOGI("APP ID from server : %s", app_id);
-	MOD_LOGI("APP ID from app manager : %s", appid);
-	MOD_LOGI("Fence_ID: %d, Error: %d, State: %d", fence_id, error, state);
 
-	if (access_type == ACCESS_TYPE_PRIVATE) {
-		if (!(g_strcmp0(appid, app_id))) {
-			if (geofence_manager->geofence_event_cb)
-				geofence_manager->geofence_event_cb(place_id, fence_id, error, state, geofence_manager->userdata);
-		}
-	} else if (access_type == ACCESS_TYPE_PUBLIC) {
-		if (!g_strcmp0(app_id, MYPLACES_APP_ID) || !g_strcmp0(appid, app_id)) {
+	MOD_LOGD("place_id: %d, fence_id: %d, Error: %d, State: %d(0x%x", place_id, fence_id, error, state, state);
+	MOD_LOGD("app_id: %s", geofence_manager->app_id);
+
+	if (access_type == ACCESS_TYPE_PUBLIC) {
+		if (!g_strcmp0(app_id, MYPLACES_APP_ID) || !g_strcmp0(geofence_manager->app_id, app_id)) {
 			if (geofence_manager->geofence_event_cb)
 				geofence_manager->geofence_event_cb(place_id, fence_id, error, state, geofence_manager->userdata);
 		}
 	} else {
-		if (!(g_strcmp0(appid, app_id))) {
+		if (!(g_strcmp0(geofence_manager->app_id, app_id))) {
 			if (geofence_manager->geofence_event_cb)
 				geofence_manager->geofence_event_cb(place_id, fence_id, error, state, geofence_manager->userdata);
 		}
 	}
-	if (appid)
-		g_free(appid);
-	if (app_id)
-		g_free(app_id);
 }
 
-GEOFENCE_MODULE_API int get_place_name(void *handle, int place_id, char **place_name)
+EXPORT_API int get_place_name(void *handle, int place_id, char **place_name)
 {
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *) handle;
-	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_EXCEPTION);
-	g_return_val_if_fail(place_name, GEOFENCE_MANAGER_ERROR_EXCEPTION);
+	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
+	g_return_val_if_fail(place_name, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
 
 	int error_code = GEOFENCE_MANAGER_ERROR_NONE;
-	int ret = geo_client_get_place_name(geofence_manager->geofence_client, place_id, place_name, &error_code);
+	int ret = geo_client_get_place_name(geofence_manager->geofence_client, geofence_manager->app_id, place_id, place_name, &error_code);
 	if (ret != GEOFENCE_CLIENT_ERROR_NONE)
-		return GEOFENCE_MANAGER_ERROR_EXCEPTION;
+		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
 	return error_code;
 }
 
-GEOFENCE_MODULE_API int get_list(void *handle, int place_id, int *fence_amount, int **fence_ids, struct geofence_params_s **params)
+EXPORT_API int get_geofences(void *handle, int place_id, int *fence_amount, int **fence_ids, geofence_s **params)
 {
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *) handle;
-	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_EXCEPTION);
-	g_return_val_if_fail(fence_amount, GEOFENCE_MANAGER_ERROR_EXCEPTION);
-	g_return_val_if_fail(fence_ids, GEOFENCE_MANAGER_ERROR_EXCEPTION);
-	g_return_val_if_fail(params, GEOFENCE_MANAGER_ERROR_EXCEPTION);
+	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
+	g_return_val_if_fail(fence_amount, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
+	g_return_val_if_fail(fence_ids, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
+	g_return_val_if_fail(params, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
 
 	if (!geofence_manager) {
 		*fence_amount = 0;
@@ -283,15 +225,16 @@ GEOFENCE_MODULE_API int get_list(void *handle, int place_id, int *fence_amount, 
 	int fence_cnt = 0;
 	int error_code = GEOFENCE_MANAGER_ERROR_NONE;
 
-	/*Call the geofence_client api here....*/
-	geo_client_get_list(geofence_manager->geofence_client, place_id, &iter, &fence_cnt, &error_code);
+	int ret = geo_client_get_geofences(geofence_manager->geofence_client, geofence_manager->app_id, place_id, &iter, &fence_cnt, &error_code);
 	if (error_code != GEOFENCE_MANAGER_ERROR_NONE)
 		return error_code;
+	else if (ret != GEOFENCE_MANAGER_ERROR_NONE)
+		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
 
 	*fence_amount = fence_cnt;
-	MOD_LOGI("Total fence count : %d", *fence_amount);
-	int *fence_id_array = (int *) g_slice_alloc0(sizeof(int)*fence_cnt);
-	geofence_params_s *p = (geofence_params_s *)g_slice_alloc0(sizeof(geofence_params_s)*fence_cnt);
+	MOD_LOGD("Total fence count : %d", *fence_amount);
+	int *fence_id_array = (int *) g_slice_alloc0(sizeof(int) * fence_cnt);
+	geofence_s *p = (geofence_s *) g_slice_alloc0(sizeof(geofence_s) * fence_cnt);
 
 	if (iter == NULL) {
 		MOD_LOGI("Iterator is null");
@@ -300,7 +243,7 @@ GEOFENCE_MODULE_API int get_list(void *handle, int place_id, int *fence_amount, 
 		while (g_variant_iter_loop(iter_row, "{sv}", &key, &value)) {
 			if (!g_strcmp0(key, "fence_id")) {
 				fence_id_array[index] =
-					g_variant_get_int32(value);
+				    g_variant_get_int32(value);
 			} else if (!g_strcmp0(key, "place_id")) {
 				p[index].place_id = g_variant_get_int32(value);
 			} else if (!g_strcmp0(key, "geofence_type")) {
@@ -312,11 +255,11 @@ GEOFENCE_MODULE_API int get_list(void *handle, int place_id, int *fence_amount, 
 			} else if (!g_strcmp0(key, "radius")) {
 				p[index].radius = g_variant_get_int32(value);
 			} else if (!g_strcmp0(key, "address")) {
-				g_strlcpy(p[index].address, g_variant_get_string(value, NULL), _ADDRESS_LEN);
+				g_strlcpy(p[index].address, g_variant_get_string(value, NULL), ADDRESS_LEN);
 			} else if (!g_strcmp0(key, "bssid")) {
-				g_strlcpy(p[index].bssid, g_variant_get_string(value, NULL), _WLAN_BSSID_LEN);
+				g_strlcpy(p[index].bssid, g_variant_get_string(value, NULL), WLAN_BSSID_LEN);
 			} else if (!g_strcmp0(key, "ssid")) {
-				g_strlcpy(p[index].ssid, g_variant_get_string(value, NULL), _WLAN_BSSID_LEN);
+				g_strlcpy(p[index].ssid, g_variant_get_string(value, NULL), WLAN_BSSID_LEN);
 			}
 		}
 		MOD_LOGI("Fence_id: %d, Place_id: %d, Type: %d, lat: %f, lon: %f, rad: %d, address: %s, bssid: %s, ssid: %s", fence_id_array[index], p[index].place_id, p[index].type, p[index].latitude, p[index].longitude, p[index].radius, p[index].address, p[index].bssid, p[index].ssid);
@@ -324,19 +267,19 @@ GEOFENCE_MODULE_API int get_list(void *handle, int place_id, int *fence_amount, 
 		g_variant_iter_free(iter_row);
 	}
 	g_variant_iter_free(iter);
-	*params = (struct geofence_params_s *) p;
+	*params = (geofence_s *) p;
 	*fence_ids = fence_id_array;
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
 }
 
-GEOFENCE_MODULE_API int get_place_list(void *handle, int *place_amount, int **place_ids, struct place_params_s **params)
+EXPORT_API int get_places(void *handle, int *place_amount, int **place_ids, place_s **params)
 {
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *) handle;
-	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_EXCEPTION);
-	g_return_val_if_fail(place_amount, GEOFENCE_MANAGER_ERROR_EXCEPTION);
-	g_return_val_if_fail(place_ids, GEOFENCE_MANAGER_ERROR_EXCEPTION);
-	g_return_val_if_fail(params, GEOFENCE_MANAGER_ERROR_EXCEPTION);
+	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
+	g_return_val_if_fail(place_amount, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
+	g_return_val_if_fail(place_ids, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
+	g_return_val_if_fail(params, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
 
 	if (!geofence_manager) {
 		*place_amount = 0;
@@ -351,14 +294,14 @@ GEOFENCE_MODULE_API int get_place_list(void *handle, int *place_amount, int **pl
 	int error_code = -1;
 
 	/*Call the geofence_client api here....*/
-	geo_client_get_place_list(geofence_manager->geofence_client, &iter, &place_cnt, &error_code);
+	geo_client_get_places(geofence_manager->geofence_client, geofence_manager->app_id, &iter, &place_cnt, &error_code);
 	if (error_code != GEOFENCE_MANAGER_ERROR_NONE)
 		return error_code;
 
 	*place_amount = place_cnt;
 	MOD_LOGI("Total place count : %d", *place_amount);
-	int *place_id_array = (int *)g_slice_alloc0(sizeof(int)*place_cnt);
-	place_params_s *p = (place_params_s *)g_slice_alloc0(sizeof(place_params_s)*place_cnt);
+	int *place_id_array = (int *)g_slice_alloc0(sizeof(int) * place_cnt);
+	place_s *p = (place_s *)g_slice_alloc0(sizeof(place_s) * place_cnt);
 
 	if (iter == NULL)
 		MOD_LOGI("Iterator is null");
@@ -368,7 +311,7 @@ GEOFENCE_MODULE_API int get_place_list(void *handle, int *place_amount, int **pl
 			if (!g_strcmp0(key, "place_id")) {
 				place_id_array[index] = g_variant_get_int32(value);
 			} else if (!g_strcmp0(key, "place_name")) {
-				g_strlcpy(p[index].place_name, g_variant_get_string(value, NULL), _PLACE_NAME_LEN);
+				g_strlcpy(p[index].place_name, g_variant_get_string(value, NULL), PLACE_NAME_LEN);
 			}
 		}
 		MOD_LOGI("place_id: %d, place_name: %s", place_id_array[index], p[index].place_name);
@@ -376,7 +319,8 @@ GEOFENCE_MODULE_API int get_place_list(void *handle, int *place_amount, int **pl
 		g_variant_iter_free(iter_row);
 	}
 	g_variant_iter_free(iter);
-	*params = (struct place_params_s *) p;
+	*params = (place_s *)p;
+
 	*place_ids = place_id_array;
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
@@ -395,7 +339,7 @@ static void on_signal_callback(const gchar *sig, GVariant *param, gpointer user_
 	}
 }
 
-GEOFENCE_MODULE_API int start_geofence(void *handle, int fence_id)
+EXPORT_API int start_geofence(void *handle, int fence_id)
 {
 	MOD_LOGD("start_geofence");
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *)handle;
@@ -405,39 +349,39 @@ GEOFENCE_MODULE_API int start_geofence(void *handle, int fence_id)
 
 	MOD_LOGD("geofence-server(%x)", geofence_manager);
 
-	ret = geo_client_start_geofence(geofence_manager->geofence_client, fence_id);
+	ret = geo_client_start_geofence(geofence_manager->geofence_client, geofence_manager->app_id, fence_id);
 	if (ret != GEOFENCE_MANAGER_ERROR_NONE) {
 		MOD_LOGE("Fail to start geofence_client_h. Error[%d]", ret);
-		return GEOFENCE_MANAGER_ERROR_EXCEPTION;
+		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
 	}
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
 }
 
-GEOFENCE_MODULE_API int stop_geofence(void *handle, int fence_id)
+EXPORT_API int stop_geofence(void *handle, int fence_id)
 {
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *)handle;
 	MOD_LOGD("geofence_manager->geofence_cb : %x", geofence_manager->geofence_cb);
-	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_EXCEPTION);
-	g_return_val_if_fail(geofence_manager->geofence_client,	GEOFENCE_MANAGER_ERROR_EXCEPTION);
+	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
+	g_return_val_if_fail(geofence_manager->geofence_client,	GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
 
 	int ret = GEOFENCE_CLIENT_ERROR_NONE;
 
-	ret = geo_client_stop_geofence(geofence_manager->geofence_client, fence_id);
+	ret = geo_client_stop_geofence(geofence_manager->geofence_client, geofence_manager->app_id, fence_id);
 	if (ret != GEOFENCE_MANAGER_ERROR_NONE) {
 		MOD_LOGE("Fail to stop. Error[%d]", ret);
-		return GEOFENCE_MANAGER_ERROR_EXCEPTION;
+		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
 	}
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
 }
 
-GEOFENCE_MODULE_API int create(void *handle, GeofenceModCB geofence_cb,
-	GeofenceModEventCB geofence_event_cb, void *userdata)
+EXPORT_API int create(void *handle, GeofenceModCB geofence_cb,
+                               GeofenceModEventCB geofence_event_cb, void *userdata)
 {
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *) handle;
-	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_EXCEPTION);
-	g_return_val_if_fail(geofence_cb, GEOFENCE_MANAGER_ERROR_EXCEPTION);
+	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
+	g_return_val_if_fail(geofence_cb, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
 
 	/* create connnection */
 	int ret = GEOFENCE_MANAGER_ERROR_NONE;
@@ -449,10 +393,15 @@ GEOFENCE_MODULE_API int create(void *handle, GeofenceModCB geofence_cb,
 	ret = geo_client_create(&(geofence_manager->geofence_client));
 	if (ret != GEOFENCE_CLIENT_ERROR_NONE || !geofence_manager->geofence_client) {
 		MOD_LOGE("Fail to create geofence_client_dbus_h. Error[%d]", ret);
-		return GEOFENCE_MANAGER_ERROR_EXCEPTION;
+		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
 	}
 
-	ret = geo_client_start(GEOFENCE_SERVER_SERVICE_NAME, GEOFENCE_SERVER_SERVICE_PATH, geofence_manager->geofence_client, on_signal_callback, on_signal_callback, geofence_manager);
+	MOD_LOGD("geofence_manager->geofence_client: %p", geofence_manager->geofence_client);
+	ret = geo_client_start(geofence_manager->geofence_client, on_signal_callback, geofence_manager);
+#if 0
+	ret = geo_client_start(geofence_manager->geofence_client, on_signal_callback, geofence_manager);
+#endif
+
 	if (ret != GEOFENCE_CLIENT_ERROR_NONE) {
 		if (ret == GEOFENCE_CLIENT_ACCESS_DENIED) {
 			MOD_LOGE("Access denied[%d]", ret);
@@ -462,19 +411,19 @@ GEOFENCE_MODULE_API int create(void *handle, GeofenceModCB geofence_cb,
 		geo_client_destroy(geofence_manager->geofence_client);
 		geofence_manager->geofence_client = NULL;
 
-		return GEOFENCE_CLIENT_ERROR_UNKNOWN;
+		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
 	}
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
 }
 
-GEOFENCE_MODULE_API int destroy(void *handle)
+EXPORT_API int destroy(void *handle)
 {
 	MOD_LOGD("destroy");
 
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *)handle;
-	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_EXCEPTION);
-	g_return_val_if_fail(geofence_manager->geofence_client, GEOFENCE_MANAGER_ERROR_EXCEPTION);
+	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
+	g_return_val_if_fail(geofence_manager->geofence_client, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
 
 	int ret = GEOFENCE_MANAGER_ERROR_NONE;
 
@@ -483,13 +432,13 @@ GEOFENCE_MODULE_API int destroy(void *handle)
 		MOD_LOGE("Fail to stop. Error[%d]", ret);
 		geo_client_destroy(geofence_manager->geofence_client);
 		geofence_manager->geofence_client = NULL;
-		return GEOFENCE_CLIENT_ERROR_UNKNOWN;
+		return GEOFENCE_MANAGER_ERROR_IPC;
 	}
 
 	ret = geo_client_destroy(geofence_manager->geofence_client);
 	if (ret != GEOFENCE_CLIENT_ERROR_NONE) {
 		MOD_LOGE("Fail to destroy. Error[%d]", ret);
-		return GEOFENCE_CLIENT_ERROR_UNKNOWN;
+		return GEOFENCE_MANAGER_ERROR_IPC;
 	}
 	geofence_manager->geofence_client = NULL;
 	geofence_manager->geofence_cb = NULL;
@@ -499,7 +448,26 @@ GEOFENCE_MODULE_API int destroy(void *handle)
 	return GEOFENCE_MANAGER_ERROR_NONE;
 }
 
-GEOFENCE_MODULE_API gpointer init(GeofenceModOps *ops)
+static void __get_caller_app_id(void *handle)
+{
+	GeofenceManagerData *geofence_manager = (GeofenceManagerData *)handle;
+	g_return_if_fail(geofence_manager);
+
+	gchar *app_id = NULL;
+	int ret = 0;
+
+	pid_t pid = 0;
+	pid = getpid();
+	ret = app_manager_get_app_id(pid, &app_id);
+	if (ret != APP_MANAGER_ERROR_NONE) {
+		MOD_LOGE("Fail to get app_id from module_geofence_server. Err[%d]", ret);
+	} else {
+		MOD_LOGD("app_id: %s", app_id);
+		geofence_manager->app_id = app_id;
+	}
+}
+
+EXPORT_API gpointer init(GeofenceModOps *ops)
 {
 	MOD_LOGD("init");
 
@@ -511,13 +479,14 @@ GEOFENCE_MODULE_API gpointer init(GeofenceModOps *ops)
 	ops->stop_geofence = stop_geofence;
 	ops->add_geopoint = add_geopoint;
 	ops->add_bssid = add_bssid;
+	ops->remove_geofence = remove_geofence;
+	ops->get_geofences = get_geofences;
+
 	ops->add_place = add_place;
 	ops->update_place = update_place;
-	ops->remove_geofence = remove_geofence;
 	ops->remove_place = remove_place;
 	ops->get_place_name = get_place_name;
-	ops->get_list = get_list;
-	ops->get_place_list = get_place_list;
+	ops->get_places = get_places;
 
 	GeofenceManagerData *geofence_manager = g_new0(GeofenceManagerData, 1);
 	g_return_val_if_fail(geofence_manager, NULL);
@@ -526,10 +495,12 @@ GEOFENCE_MODULE_API gpointer init(GeofenceModOps *ops)
 	geofence_manager->geofence_event_cb = NULL;
 	geofence_manager->userdata = NULL;
 
+	__get_caller_app_id(geofence_manager);
+
 	return (gpointer) geofence_manager;
 }
 
-GEOFENCE_MODULE_API void shutdown(gpointer handle)
+EXPORT_API void shutdown(gpointer handle)
 {
 	MOD_LOGD("shutdown");
 	g_return_if_fail(handle);
@@ -542,7 +513,7 @@ GEOFENCE_MODULE_API void shutdown(gpointer handle)
 	}
 
 	geofence_manager->geofence_cb = NULL;
-
+	g_free(geofence_manager->app_id);
 	g_free(geofence_manager);
 	geofence_manager = NULL;
 }

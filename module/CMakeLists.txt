@@ -11,7 +11,6 @@ INCLUDE_DIRECTORIES(${SERVER_SRCS_DIR}/include)
 
 SET (CLIENT_SRCS
 	module_geofence_server.c 
-	module_internal.c
 )
 
 ADD_LIBRARY(${geofence_module} SHARED ${CLIENT_SRCS})

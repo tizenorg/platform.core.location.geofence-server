@@ -8,7 +8,7 @@ SET(BIN_DIR "${PREFIX}/bin")
 
 SET(common_dp "glib-2.0 geofence-dbus dlog gio-2.0 capi-appfw-app-manager")
 SET(server_dp "${common_dp} network vconf vconf-internal-keys gthread-2.0  gio-unix-2.0 sqlite3 db-util alarm-service deviced capi-location-manager capi-network-bluetooth capi-network-wifi libcore-context-manager")
-SET(module_dp "${common_dp} gmodule-2.0")
+SET(module_dp "${common_dp} gmodule-2.0 capi-geofence-manager")
 
 # Set required packages
 INCLUDE(FindPkgConfig)
@@ -25,10 +25,10 @@ FOREACH(flag ${module_pkgs_CFLAGS})
 	SET(MODULE_EXTRA_CFLAGS "${MODULE_EXTRA_CFLAGS} ${flag}")
 ENDFOREACH(flag)
 
-SET(EXTRA_CFLAGS "${EXTRA_CFLAGS}  -Wl,-zdefs -fvisibility=hidden ")
+SET(EXTRA_CFLAGS "${EXTRA_CFLAGS}  -Wl,-zdefs ")
 
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_CFLAGS}")
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -fvisibility=hidden -fPIC")
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror -fvisibility=hidden -fPIC")
 #SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-parameter -Wno-missing-field-initializers -Wno-missing-declarations -Wall -Wcast-align -Wno-sign-compare")
 
 SET(SERVER_SRCS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/geofence-server")

@@ -35,7 +35,7 @@ extern "C" {
 #define LOGI_GEOFENCE(fmt, args...)  SLOG(LOG_INFO, TAG_GEOFENCE_SERVER, fmt, ##args)
 #define LOGW_GEOFENCE(fmt, args...)  SLOG(LOG_WARN, TAG_GEOFENCE_SERVER, fmt, ##args)
 #define LOGE_GEOFENCE(fmt, args...)  SLOG(LOG_ERROR, TAG_GEOFENCE_SERVER, fmt, ##args)
-#define FUNC_ENTRANCE_SERVER         LOGD_GEOFENCE("[%s] Entered!!\n", __func__);
+#define FUNC_ENTRANCE_SERVER         LOGD_GEOFENCE("ENTER >>>");
 
 #ifdef __cplusplus
 }

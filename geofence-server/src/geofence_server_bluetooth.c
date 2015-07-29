@@ -40,7 +40,7 @@ static gboolean __geofence_check_fence_status(int fence_status, GeofenceItemData
 static void emit_bt_geofence_inout_changed(GeofenceServer *geofence_server, GeofenceItemData *item_data, int fence_status)
 {
 	FUNC_ENTRANCE_SERVER
-	char *app_id = (char *)g_malloc0(sizeof(char)*APP_ID_LEN);
+	char *app_id = (char *)g_malloc0(sizeof(char) * APP_ID_LEN);
 	g_strlcpy(app_id, item_data->common_info.appid, APP_ID_LEN);
 	if (app_id == NULL) {
 		LOGD_GEOFENCE("get app_id failed. fence_id [%d]", item_data->common_info.fence_id);
@@ -85,15 +85,15 @@ static void __geofence_check_bt_fence_type(gboolean connected, const char *bssid
 			continue;
 
 		fence_type = item_data->common_info.type;
-		
+
 		if (fence_type != GEOFENCE_TYPE_BT)
 			continue;
-		
+
 		bt_info_from_list = (bssid_info_s *) item_data->priv;
 
 		if (bt_info_from_list == NULL || bt_info_from_list->enabled == FALSE)
 			continue;
-		
+
 		ret = geofence_manager_get_bssid_info(fence_id, &bt_info_from_db);
 
 		if (bt_info_from_db == NULL) {
@@ -147,7 +147,7 @@ void bt_conn_state_changed(gboolean connected, bt_device_connection_info_s *conn
 void bt_adp_disable(gboolean connected, void *user_data)
 {
 	FUNC_ENTRANCE_SERVER
-	GeofenceServer * geofence_server = (GeofenceServer *) user_data;
+	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
 	g_return_if_fail(geofence_server);
 
 	int fence_id = 0;

@@ -70,7 +70,7 @@ double _get_min_distance(double cur_lat, double cur_lon, GeofenceServer *geofenc
 			geocoordinate_info = (geocoordinate_info_s *)item_data->priv;
 			/* get_current_position/ check_fence_in/out  for geoPoint*/
 			location_manager_get_distance(cur_lat, cur_lon,	geocoordinate_info->latitude, geocoordinate_info->longitude, &distance);
-			if (distance < min_dist) 
+			if (distance < min_dist)
 				min_dist = distance;
 		}
 		item_list = g_list_next(item_list);

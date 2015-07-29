@@ -27,11 +27,11 @@ struct tm *__get_current_time();
 		char buf[256] = {0, }; \
 		sprintf(buf, " [%s:%d] Status[%s]", __func__, __LINE__, #state); \
 		_print_log(buf); \
-		}
+	}
 #define GEOFENCE_PRINT_LOG_WITH_ID(state, id)	{ \
 		char buf[256] = {0, }; \
 		sprintf(buf, " [%s:%d] Status[%s]. ID[%d]", __func__, __LINE__, #state, id); \
 		_print_log(buf); \
-		}
+	}
 
 #endif /* _GEOFENCE_MANAGER_LOG_H_ */

@@ -39,7 +39,7 @@
  * @Param[in]	user_data	The user data to be returned
  * @see None.
  */
-typedef void (*geofence_bt_conn_state_changed_cb) (gboolean connected, bt_device_connection_info_s *conn_info, void *user_data);
+typedef void (*geofence_bt_conn_state_changed_cb)(gboolean connected, bt_device_connection_info_s *conn_info, void *user_data);
 
 /**
  * @brief	Bluetooth adapter disabled callback
@@ -48,7 +48,7 @@ typedef void (*geofence_bt_conn_state_changed_cb) (gboolean connected, bt_device
  * @Param[in]	user_data	The user data to be returned
  * @see None.
  */
-typedef void (*geofence_bt_adapter_disable_cb) (gboolean connected, void *user_data);
+typedef void (*geofence_bt_adapter_disable_cb)(gboolean connected, void *user_data);
 
 /**
  * @brief	Wifi connection status change callback
@@ -58,7 +58,7 @@ typedef void (*geofence_bt_adapter_disable_cb) (gboolean connected, void *user_d
  * @Param[in]	user_data	The user data to be returned
  * @see None.
  */
-typedef void (*geofence_wifi_conn_state_changed_cb) (wifi_connection_state_e state, wifi_ap_h ap, void *user_data);
+typedef void (*geofence_wifi_conn_state_changed_cb)(wifi_connection_state_e state, wifi_ap_h ap, void *user_data);
 
 /**
  * @brief	Wifi device status change callback
@@ -67,7 +67,7 @@ typedef void (*geofence_wifi_conn_state_changed_cb) (wifi_connection_state_e sta
  * @Param[in]	user_data	The user data to be returned
  * @see None.
  */
-typedef void (*geofence_wifi_device_state_changed_cb) (wifi_device_state_e state, void *user_data);
+typedef void (*geofence_wifi_device_state_changed_cb)(wifi_device_state_e state, void *user_data);
 
 /**
  * @brief       Network scan status change callback
@@ -76,7 +76,7 @@ typedef void (*geofence_wifi_device_state_changed_cb) (wifi_device_state_e state
  * @Param[in]   user_data       The user data to be returned
  * @see None.
  */
-typedef void (*geofence_network_event_cb) (net_event_info_t *event_cb, void *user_data);
+typedef void (*geofence_network_event_cb)(net_event_info_t *event_cb, void *user_data);
 
 /**
  * @brief       BT Discovery status change callback
@@ -85,7 +85,7 @@ typedef void (*geofence_network_event_cb) (net_event_info_t *event_cb, void *use
  * @Param[in]   user_data       The user data to be returned
  * @see None.
  */
-typedef void (*geofence_bt_adapter_device_discovery_state_changed_cb) (int result, bt_adapter_device_discovery_state_e discovery_state, bt_adapter_device_discovery_info_s *discovery_info, void *user_data);
+typedef void (*geofence_bt_adapter_device_discovery_state_changed_cb)(int result, bt_adapter_device_discovery_state_e discovery_state, bt_adapter_device_discovery_info_s *discovery_info, void *user_data);
 
 /**
  * @brief Called when the state of location method is changed.
@@ -97,7 +97,7 @@ typedef void (*geofence_bt_adapter_device_discovery_state_changed_cb) (int resul
  * @see location_manager_set_setting_changed_cb()
  * @see location_manager_unset_setting_changed_cb()
  */
-typedef void (*geofence_gps_setting_changed_cb) (location_method_e method, bool enable, void *user_data);
+typedef void (*geofence_gps_setting_changed_cb)(location_method_e method, bool enable, void *user_data);
 
 /**
  * Geofence callback structure.
@@ -118,38 +118,38 @@ typedef struct geofence_callbacks_s geofence_callbacks;
  * This enumeration describe the smart assistant status.
  */
 typedef enum {
-	GEOFENCE_SMART_ASSIST_NONE,
-	GEOFENCE_SMART_ASSIST_ENABLED,
-	GEOFENCE_SMART_ASSIST_DISABLED,
-	GEOFENCE_SMART_ASSIST_COLLECTING,
+    GEOFENCE_SMART_ASSIST_NONE,
+    GEOFENCE_SMART_ASSIST_ENABLED,
+    GEOFENCE_SMART_ASSIST_DISABLED,
+    GEOFENCE_SMART_ASSIST_COLLECTING,
 } smart_assist_status_e;
 
 /**
  * This enumeration describe the cell geofence in and out status.
  */
 typedef enum {
-	CELL_UNKNOWN = -1,
-	CELL_OUT = 0,
-	CELL_IN = 1
+    CELL_UNKNOWN = -1,
+    CELL_OUT = 0,
+    CELL_IN = 1
 } cell_status_e;
 
 /**
  * This enumeration describe the wifi geofence in and out status.
  */
 typedef enum {
-	WIFI_DIRECTION_UNKNOWN = -1,
-	WIFI_DIRECTION_OUT = 0,
-	WIFI_DIRECTION_IN = 1
+    WIFI_DIRECTION_UNKNOWN = -1,
+    WIFI_DIRECTION_OUT = 0,
+    WIFI_DIRECTION_IN = 1
 } wifi_status_e;
 
 /**
  * This enumeration describe the geofence client status.
  */
 typedef enum {
-	GEOFENCE_CLIENT_STATUS_NONE,
-	GEOFENCE_CLIENT_STATUS_FIRST_LOCATION,
-	GEOFENCE_CLIENT_STATUS_START,
-	GEOFENCE_CLIENT_STATUS_RUNNING
+    GEOFENCE_CLIENT_STATUS_NONE,
+    GEOFENCE_CLIENT_STATUS_FIRST_LOCATION,
+    GEOFENCE_CLIENT_STATUS_START,
+    GEOFENCE_CLIENT_STATUS_RUNNING
 } geofence_client_status_e;
 
 #endif

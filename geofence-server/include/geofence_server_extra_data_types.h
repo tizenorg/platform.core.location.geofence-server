@@ -24,7 +24,8 @@ typedef enum {
 	GEOFENCE_ZONE_IN = 0x00,
 	GEOFENCE_ZONE_OUT = 0x01,
 	GEOFENCE_ZONE_UNCERTAIN = 0x02,
-} geofence_zone_state_t;
+}
+geofence_zone_state_t;
 
 #ifdef __cplusplus
 }

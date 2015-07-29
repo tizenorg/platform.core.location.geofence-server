@@ -25,11 +25,6 @@ extern "C" {
 #include <dlog.h>
 #define TAG_GEOFENCE_MOD      "GEOFENCE_MOD"
 
-#define LOGD_GEOFENCE(fmt, args...)  LOG(LOG_DEBUG, TAG_GEOFENCE_MOD, fmt, ##args)
-#define LOGI_GEOFENCE(fmt, args...)  LOG(LOG_INFO, TAG_GEOFENCE_MOD, fmt, ##args)
-#define LOGW_GEOFENCE(fmt, args...)  LOG(LOG_WARN, TAG_GEOFENCE_MOD, fmt, ##args)
-#define LOGE_GEOFENCE(fmt, args...)  LOG(LOG_ERROR, TAG_GEOFENCE_SERVER_MOD, fmt, ##args)
-
 #define MOD_LOGD(fmt, args...)  LOG(LOG_DEBUG, TAG_GEOFENCE_MOD, fmt, ##args)
 #define MOD_LOGW(fmt, args...)  LOG(LOG_WARN,  TAG_GEOFENCE_MOD, fmt, ##args)
 #define MOD_LOGI(fmt, args...)  LOG(LOG_INFO,  TAG_GEOFENCE_MOD, fmt, ##args)
