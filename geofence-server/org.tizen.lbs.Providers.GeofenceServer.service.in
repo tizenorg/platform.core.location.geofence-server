@@ -1,5 +1,5 @@
 [D-BUS Service]
 Name=org.tizen.lbs.Providers.GeofenceServer
 Exec=@BIN_DIR@/geofence-server
-User=system
-Group=system
+#User=system
+#Group=system

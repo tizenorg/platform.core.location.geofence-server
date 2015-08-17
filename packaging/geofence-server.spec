@@ -1,6 +1,6 @@
 Name:       geofence-server
 Summary:    Geofence Server for Tizen
-Version:    0.4.0
+Version:    0.4.1
 Release:    1
 Group:      Location/Service
 License:    Apache-2.0
@@ -36,6 +36,7 @@ BuildRequires:  pkgconfig(libcore-context-manager)
 #BuildRequires:  pkgconfig(capi-telephony-network-info)
 #BuildRequires:  pkgconfig(capi-context-manager)
 BuildRequires:  pkgconfig(capi-geofence-manager)
+BuildRequires:  pkgconfig(libtzplatform-config)
 BuildRequires:  capi-geofence-manager-plugin-devel
 Requires:  sys-assert
 
@@ -62,6 +63,12 @@ make %{?jobs:-j%jobs}
 rm -rf %{buildroot}
 %make_install
 
+#[Workaround] create service file for systemd
+mkdir -p %{buildroot}%{_unitdir_user}/multi-user.target.wants
+install -m 644 %{SOURCE1} %{buildroot}%{_unitdir_user}/geofence-server.service
+ln -s ../geofence-server.service %{buildroot}%{_unitdir_user}/multi-user.target.wants/geofence-server.service
+
+%if 0
 if [ ! -e "$GEOFENCE_SERVER_DB_PATH" ]
 then
 
@@ -74,29 +81,39 @@ sqlite3 %{buildroot}/opt/dbspace/.geofence-server.db 'PRAGMA journal_mode = PERS
 	CREATE TABLE FenceGeopointWifi ( fence_id INTEGER, bssid TEXT, ssid TEXT, FOREIGN KEY(fence_id) REFERENCES GeoFence(fence_id) ON DELETE CASCADE);
 	CREATE TABLE FenceBssid ( fence_id INTEGER, bssid TEXT, ssid TEXT, FOREIGN KEY(fence_id) REFERENCES Geofence(fence_id) ON DELETE CASCADE);'
 fi
+%endif
 
 %clean
 rm -rf %{buildroot}
 
 %post
+
+%if 0
 GEOFENCE_SERVER_DB_PATH="/opt/dbspace/.geofence-server.db"
 
 # geofence-server db file
 chown system:system /opt/dbspace/.geofence-server.db
 chown system:system /opt/dbspace/.geofence-server.db-journal
-## Change geofence-server db file permissions
+# Change geofence-server db file permissions
 chmod 660 /opt/dbspace/.geofence-server.db
 chmod 660 /opt/dbspace/.geofence-server.db-journal
+%endif
 
 %postun -p /sbin/ldconfig
 
 %files
 %manifest geofence-server.manifest
-%defattr(-,system,system,-)
+%defattr(-,root,root,-)
 /usr/bin/geofence-server
-/usr/share/dbus-1/system-services/org.tizen.lbs.Providers.GeofenceServer.service
-/opt/dbspace/.*.db*
+
+/usr/share/dbus-1/services/org.tizen.lbs.Providers.GeofenceServer.service
+#/opt/dbspace/.*.db*
 %config %{_sysconfdir}/dbus-1/system.d/geofence-server.conf
+
+#[Workaround] create service file for systemd
+%{_unitdir_user}/geofence-server.service
+%{_unitdir_user}/multi-user.target.wants/geofence-server.service
+
 
 %package -n location-geofence-server
 Summary:    Geofence Server for Tizen

@@ -8,9 +8,11 @@ Requires=tizen-runtime.target
 #ExecStart=/etc/rc.d/rc5.d/S91geofence-server
 ExecStart=/usr/bin/geofence-server
 MemoryLimit=10M
-User=system
-Group=system
+#User=system
+#Group=system
 #SmackProcessLabel=location_fw
+Restart=always
+RestartSec=1
 
 [Install]
 WantedBy=multi-user.target
