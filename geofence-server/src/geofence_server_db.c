@@ -22,14 +22,20 @@
 #include <string.h>
 #include <bluetooth.h>
 #include <wifi.h>
+#include <tzplatform_config.h>
 
 #include "debug_util.h"
 #include "geofence_server.h"
 #include "geofence_server_db.h"
 #include "geofence_server_private.h"
 
-#define GEOFENCE_SERVER_DB_FILE		".geofence-server.db"
-#define GEOFENCE_SERVER_DB_PATH		"/opt/dbspace/"GEOFENCE_SERVER_DB_FILE
+/* dbspace path for Tizen 3.0 was changed.
+#define GEOFENCE_SERVER_DB_FILE                ".geofence-server.db"
+#define GEOFENCE_SERVER_DB_PATH                "/opt/dbspace/"GEOFENCE_SERVER_DB_FILE
+*/
+
+#define GEOFENCE_DB_PATH	tzplatform_getenv(TZ_USER_DB)
+#define GEOFENCE_DB_FILE	".geofence-server.db"
 
 #define MAX_DATA_NAME		20
 #define DATA_LEN			20
@@ -277,12 +283,12 @@ static inline int __geofence_manager_db_create_bssid_table(void)
 	return FENCE_ERR_NONE;
 }
 
-static int __geofence_manager_open_db_handle(void)
+static int __geofence_manager_open_db_handle(char *geofence_db_file)
 {
 	LOGI_GEOFENCE("enter");
 	int ret = SQLITE_OK;
 
-	ret = db_util_open_with_options(GEOFENCE_SERVER_DB_PATH, &db_info_s.handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX, NULL);
+	ret = db_util_open_with_options(geofence_db_file, &db_info_s.handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX, NULL);
 	if (ret != SQLITE_OK) {
 		LOGI_GEOFENCE("sqlite3_open_v2 Error[%d] : %s", ret, sqlite3_errmsg(db_info_s.handle));
 		return FENCE_ERR_SQLITE_FAIL;
@@ -663,13 +669,20 @@ int geofence_manager_db_init(void)
 {
 	FUNC_ENTRANCE_SERVER;
 	struct stat stat;
+	char *geofence_db_file = NULL;
 
-	if (__geofence_manager_open_db_handle() != FENCE_ERR_NONE) {
+	geofence_db_file = g_strdup_printf("%s/%s", GEOFENCE_DB_PATH, GEOFENCE_DB_FILE);
+	if (!geofence_db_file) {
+		LOGE_GEOFENCE("Fail to make geofence_server db path: %s", geofence_db_file);
+		return GEOFENCE_SERVER_ERROR_OUT_OF_MEMORY;
+	}
+
+	if (__geofence_manager_open_db_handle(geofence_db_file) != FENCE_ERR_NONE) {
 		LOGI_GEOFENCE("Fail to location_geofence_open_db_handle");
 		return FENCE_ERR_SQLITE_FAIL;
 	}
 
-	if (lstat(GEOFENCE_SERVER_DB_PATH, &stat) < 0) {
+	if (lstat(geofence_db_file, &stat) < 0) {
 		LOGI_GEOFENCE("lstat is ERROR!!!");
 		db_util_close(db_info_s.handle);
 		db_info_s.handle = NULL;
@@ -685,6 +698,8 @@ int geofence_manager_db_init(void)
 
 	if (!stat.st_size)
 		__geofence_manager_db_create_table();
+
+	g_free(geofence_db_file);
 
 	return FENCE_ERR_NONE;
 }

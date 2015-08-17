@@ -8,6 +8,7 @@ AUX_SOURCE_DIRECTORY(src SERVER_SRCS)
 
 INCLUDE_DIRECTORIES(src include)
 
+#Process will be launched by systemd. TODO: checking dbus auto activation
 CONFIGURE_FILE(org.tizen.lbs.Providers.GeofenceServer.service.in org.tizen.lbs.Providers.GeofenceServer.service @ONLY)
 INSTALL(FILES org.tizen.lbs.Providers.GeofenceServer.service DESTINATION /usr/share/dbus-1/system-services)
 INSTALL(FILES config/geofence-server.conf DESTINATION ${SYSCONF_DIR}/dbus-1/system.d)
