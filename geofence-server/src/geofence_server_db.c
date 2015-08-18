@@ -515,6 +515,12 @@ static inline void __geofence_manager_db_create_table(void)
 	int ret;
 	begin_transaction();
 
+	ret = __geofence_manager_db_create_places_table();
+	if (ret < 0) {
+		rollback_transaction();
+		return;
+	}
+
 	ret = __geofence_manager_db_create_geofence_table();
 	if (ret < 0) {
 		rollback_transaction();
