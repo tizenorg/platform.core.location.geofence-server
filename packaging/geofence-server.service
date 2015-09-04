@@ -4,7 +4,7 @@ Requires=geofence-server.service
 
 [Service]
 EnvironmentFile=/run/tizen-system-env
-Type=single
+Type=simple
 ExecStart=/usr/bin/geofence-server
 MemoryLimit=10M
 Restart=always
