@@ -262,7 +262,9 @@ int _geofence_initialize_geofence_server(GeofenceServer *geofence_server)
 	ret = wifi_set_connection_state_changed_cb(__geofence_wifi_device_connection_state_changed_cb, geofence_server);
 	if (WIFI_ERROR_NONE != ret) {
 		LOGD_GEOFENCE("wifi_set_connection_state_changed_cb() failed(%d).", ret);
-		wifi_deinitialize();
+		ret = wifi_deinitialize();
+		if (ret != WIFI_ERROR_NONE)
+			LOGD_GEOFENCE("wifi_deinitialize() failed(%d).", ret);
 		return -1;
 	} else {
 		LOGD_GEOFENCE("wifi_set_connection_state_changed_cb() success.", ret);
@@ -271,7 +273,9 @@ int _geofence_initialize_geofence_server(GeofenceServer *geofence_server)
 	ret = wifi_set_device_state_changed_cb(__geofence_wifi_device_state_changed_cb, geofence_server);
 	if (WIFI_ERROR_NONE != ret) {
 		LOGD_GEOFENCE("wifi_set_device_state_changed_cb() failed(%d).",	ret);
-		wifi_deinitialize();
+		ret = wifi_deinitialize();
+		if (ret != WIFI_ERROR_NONE)
+			LOGD_GEOFENCE("wifi_deinitialize() failed(%d).", ret);
 		return -1;
 	} else {
 		LOGD_GEOFENCE("wifi_set_device_state_changed_cb() success.", ret);
