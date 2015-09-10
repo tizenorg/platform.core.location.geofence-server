@@ -38,8 +38,9 @@ static void emit_wifi_geofence_inout_changed(GeofenceServer *geofence_server, in
 		return;
 	}
 	GeofenceItemData *item_data = __get_item_by_fence_id(fence_id, geofence_server);
-	if (app_id == NULL) {
+	if (item_data == NULL) {
 		LOGD_GEOFENCE("getting item data failed. fence_id [%d]", fence_id);
+		g_free(app_id);
 		return;
 	}
 	if (fence_status == GEOFENCE_FENCE_STATE_IN) {

@@ -1487,6 +1487,10 @@ static void dbus_start_geofence_cb(gint fence_id, const gchar *app_id, gpointer 
 							} else {
 								status_to_be_emitted = GEOFENCE_FENCE_STATE_OUT;
 							}
+
+							ret = bt_adapter_free_device_info(bt_device_info);
+							if (ret != BT_ERROR_NONE)
+								LOGE_GEOFENCE("bt_adapter_free_device_info fail[%d]", ret);
 						}
 					}
 				}

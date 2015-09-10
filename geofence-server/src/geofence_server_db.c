@@ -47,10 +47,13 @@
 char *menu_table[4] = { "GeoFence", "FenceGeocoordinate", "FenceGeopointWifi", "FenceBssid" };
 
 const char *group_id = NULL;
+
+#ifdef SUPPORT_ENCRYPTION
 static char *password = "k1s2c3w4k5a6";
 const char *col_latitude = "la";
 const char *col_longitude = "lo";
 const char *col_radius = "r";
+#endif
 
 typedef enum {
     FENCE_MAIN_TABLE = 0,	/*GeoFence */
@@ -604,6 +607,7 @@ static int __geofence_manager_db_enable_foreign_keys(void)
 	return FENCE_ERR_NONE;
 }
 
+#ifdef SUPPORT_ENCRYPTION
 void replaceChar(char *src, char oldChar, char newChar)
 {
 	while (*src) {
@@ -613,34 +617,47 @@ void replaceChar(char *src, char oldChar, char newChar)
 	}
 }
 
-void __geofence_manager_genarate_password(char *password)
+void __geofence_manager_generate_password(char *password)
 {
 	char *bt_address = NULL;
 	char *wifi_address = NULL;
-	char *token = NULL;
+	char *token = NULL, *save_token = NULL;
 	int bt_temp[6] = {0}, wifi_temp[6] = {0};
 	int i = 0, fkey[6], lkey[6];
 	char s1[100], s2[100], result[200];
 	char keyword[6] = { 'b', 'w', 'd', 's', 'j', 'f' };
+	int ret = 0;
 
-	bt_adapter_get_address(&bt_address);
-	wifi_get_mac_address(&wifi_address);
-
-	token = strtok(bt_address, ":");
-	i = 0;
-	while (token) {
-		bt_temp[i++] = atoi(token);
-		token = strtok(NULL, ":");
-		if (i >= 6)
-			break;
+	ret = bt_adapter_get_address(&bt_address);
+	if (ret != BT_ERROR_NONE) {
+		LOGD_GEOFENCE("bt address get fail %d", ret);
 	}
-	token = strtok(wifi_address, ":");
-	i = 0;
-	while (token) {
-		wifi_temp[i++] = atoi(token);
-		token = strtok(NULL, ":");
-		if (i >= 6)
-			break;
+
+	ret = wifi_get_mac_address(&wifi_address);
+	if (ret != WIFI_ERROR_NONE) {
+		LOGD_GEOFENCE("wifi address get fail %d", ret);
+	}
+
+	if (bt_address) {
+		token = strtok_r(bt_address, ":", &save_token);
+		i = 0;
+		while (token) {
+			bt_temp[i++] = atoi(token);
+			token = strtok_r(NULL, ":", &save_token);
+			if (i >= 6)
+				break;
+		}
+	}
+
+	if (wifi_address) {
+		token = strtok_r(wifi_address, ":", &save_token);
+		i = 0;
+		while (token) {
+			wifi_temp[i++] = atoi(token);
+			token = strtok_r(NULL, ":", &save_token);
+			if (i >= 6)
+				break;
+		}
 	}
 
 	memset((void *) s1, 0, sizeof(s1));
@@ -662,11 +679,16 @@ void __geofence_manager_genarate_password(char *password)
 	}
 
 	sprintf(result, "%s%s", s1, s2);
+	LOGD_GEOFENCE("result : %s", result);
 
 	password = result;
-	LOGD_GEOFENCE("result : %s", result);
-}
 
+	if (bt_address != NULL)
+		free(bt_address);
+	if (wifi_address != NULL)
+		free(wifi_address);
+}
+#endif
 
 static int __check_db_file()
 {
@@ -700,8 +722,7 @@ int geofence_manager_db_init(void)
 	if (__check_db_file()) {
 		LOGW_GEOFENCE("db(%s) file doesn't exist.", GEOFENCE_DB_FILE);
 		open_flag = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE| SQLITE_OPEN_FULLMUTEX;
-	}
-	else {
+	} else {
 		if (lstat(GEOFENCE_DB_FILE, &stat) < 0) {
 			LOGE_GEOFENCE("Can't get db(%s) information.", GEOFENCE_DB_FILE);
 			return FENCE_ERR_SQLITE_FAIL;
@@ -714,7 +735,7 @@ int geofence_manager_db_init(void)
 		return FENCE_ERR_SQLITE_FAIL;
 	}
 
-	if (!stat.st_size)
+	if (open_flag & SQLITE_OPEN_CREATE)
 		__geofence_manager_db_create_table();
 
 	return FENCE_ERR_NONE;
@@ -1160,8 +1181,10 @@ int geofence_manager_set_geocoordinate_info(int fence_id, geocoordinate_info_s *
 	ret = sqlite3_bind_int(state, ++index, fence_id);
 	SQLITE3_RETURN(ret, sqlite3_errmsg(db_info_s.handle), state);
 
+#ifdef SUPPORT_ENCRYPTION
 	if (password == NULL)
-		__geofence_manager_genarate_password(password);
+		__geofence_manager_generate_password(password);
+#endif
 
 	/* ssa_put : latitude*/
 	ret = snprintf(data_name_lat, MAX_DATA_NAME, "%lf", geocoordinate_info->latitude);
@@ -1252,8 +1275,10 @@ int geofence_manager_get_geocoordinate_info(int fence_id, geocoordinate_info_s *
 	*geocoordinate_info = (geocoordinate_info_s *)g_malloc0(sizeof(geocoordinate_info_s));
 	g_return_val_if_fail(*geocoordinate_info, FENCE_ERR_INVALID_PARAMETER);
 
+#ifdef SUPPORT_ENCRYPTION
 	if (password == NULL)
-		__geofence_manager_genarate_password(password);
+		__geofence_manager_generate_password(password);
+#endif
 
 	data_name = (char *) sqlite3_column_text(state, ++index);
 
