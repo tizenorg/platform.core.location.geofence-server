@@ -18,7 +18,6 @@
 #include <db-util.h>
 #include <gio/gio.h>
 #include <sys/stat.h>
-#include <ss_manager.h>
 #include <string.h>
 #include <bluetooth.h>
 #include <wifi.h>
@@ -1154,11 +1153,6 @@ int geofence_manager_set_geocoordinate_info(int fence_id, geocoordinate_info_s *
 	char data_name_lat[MAX_DATA_NAME] = { 0 };
 	char data_name_lon[MAX_DATA_NAME] = { 0 };
 	char data_name_rad[MAX_DATA_NAME] = { 0 };
-	/*
-	char ssa_data_lat[DATA_LEN] = { 0 };
-	char ssa_data_lon[DATA_LEN] = { 0 };
-	char ssa_data_rad[DATA_LEN] = { 0 };
-	*/
 	char *query = sqlite3_mprintf("INSERT INTO FenceGeocoordinate(fence_id, latitude, longitude, radius, address) VALUES (?, ?, ?, ?, ?)");
 
 	ret = __geofence_manager_db_get_count_of_fence_id(fence_id, FENCE_GEOCOORDINATE_TAB, &count);
@@ -1186,7 +1180,6 @@ int geofence_manager_set_geocoordinate_info(int fence_id, geocoordinate_info_s *
 		__geofence_manager_generate_password(password);
 #endif
 
-	/* ssa_put : latitude*/
 	ret = snprintf(data_name_lat, MAX_DATA_NAME, "%lf", geocoordinate_info->latitude);
 
 	ret = sqlite3_bind_text(state, ++index, data_name_lat, -1, SQLITE_STATIC);
@@ -1194,7 +1187,6 @@ int geofence_manager_set_geocoordinate_info(int fence_id, geocoordinate_info_s *
 	/*ret = sqlite3_bind_double (state, ++index, geocoordinate_info->latitude);*/
 	SQLITE3_RETURN(ret, sqlite3_errmsg(db_info_s.handle), state);
 
-	/* ssa_put : longitude*/
 	ret = snprintf(data_name_lon, MAX_DATA_NAME, "%lf", geocoordinate_info->longitude);
 	if (ret < 0) {
 		LOGD_GEOFENCE("ERROR: String will be truncated");
@@ -1205,7 +1197,6 @@ int geofence_manager_set_geocoordinate_info(int fence_id, geocoordinate_info_s *
 	/*ret = sqlite3_bind_double (state, ++index, geocoordinate_info->longitude);*/
 	SQLITE3_RETURN(ret, sqlite3_errmsg(db_info_s.handle), state);
 
-	/* ssa_put : radius*/
 	ret = snprintf(data_name_rad, MAX_DATA_NAME, "%lf", geocoordinate_info->radius);
 	if (ret < 0) {
 		LOGD_GEOFENCE("ERROR: String will be truncated");
@@ -1250,10 +1241,6 @@ int geofence_manager_get_geocoordinate_info(int fence_id, geocoordinate_info_s *
 	const char *tail = NULL;
 	int index = 0;
 	char *data_name = NULL;
-	/*
-	char *ssa_data = NULL;
-	*/
-
 	char *query = sqlite3_mprintf("SELECT * FROM FenceGeocoordinate where fence_id = %d;", fence_id);
 
 	LOGD_GEOFENCE("current fence id is [%d]", fence_id);
@@ -1401,10 +1388,8 @@ int geofence_manager_get_place_info(int place_id, place_info_s **place_info)
 	const char *tail = NULL;
 	int index = 0;
 	char *data_name = NULL;
-	/*
-	char *ssa_data = NULL;
-	*/
 	char *query = sqlite3_mprintf("SELECT * FROM Places where place_id = %d;", place_id);
+
 	LOGD_GEOFENCE("current place id is [%d]", place_id);
 	ret = sqlite3_prepare_v2(db_info_s.handle, query, -1, &state, &tail);
 	if (ret != SQLITE_OK) {
