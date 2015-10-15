@@ -28,7 +28,7 @@
 #include <network-wifi-intf.h>
 #include "geofence_server_data_types.h"
 #include "geofence_server.h"
-
+#include <stdio.h>
 #include <activity_recognition.h>
 
 #ifdef __cplusplus
@@ -64,6 +64,17 @@ typedef struct {
 	char place_name[PLACE_NAME_LEN];
 	char appid[APP_ID_LEN];
 } place_info_s;
+
+/**
+ *The geocoordinate structure
+ */
+typedef struct {
+	double latitude;
+	double longitude;
+	double accuracy;
+	int timestamp;
+} location_fix_info_s;
+
 
 /**
  *The geocoordinate structure
@@ -132,6 +143,9 @@ typedef struct {
 	geofence_dbus_server_h geofence_dbus_server;
 	GList *geofence_list;	/* list of geofence list for multi clients */
 	GList *tracking_list;	/* list of geofence ids for tracking */
+	location_fix_info_s *gps_fix_info;
+	location_fix_info_s *wps_fix_info;
+	int gps_trigger_interval;
 	time_t last_loc_time;
 	time_t last_result_time;
 	int running_geopoint_cnt;
@@ -142,13 +156,17 @@ typedef struct {
 #endif
 	gpointer userdata;
 	/* for Geometry's GPS positioning*/
-	location_manager_h loc_manager;
-	/*FILE *log_file;*/
-	int loc_started;
+	location_manager_h loc_gps_manager;
+	location_manager_h loc_wps_manager;
+	FILE *log_file;
+	int loc_gps_started_by_wps;
+	int loc_gps_started;
+	int loc_wps_started;
 	alarm_id_t timer_id;	/* ID for timer source*/
-	alarm_id_t nps_alarm_id;	/* ID for WPS restart timer source*/
-	alarm_id_t nps_timeout_alarm_id;
-	alarm_id_t wifi_alarm_id;
+	alarm_id_t gps_alarm_id;	/* ID for WPS restart timer source*/
+	alarm_id_t gps_timeout_alarm_id;
+	alarm_id_t wps_timeout_alarm_id;
+	alarm_id_t wps_alarm_id;
 	alarm_id_t bt_alarm_id;
 
 	activity_type_e activity_type;

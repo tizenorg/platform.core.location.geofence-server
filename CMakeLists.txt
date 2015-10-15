@@ -7,7 +7,7 @@ SET(BIN_DIR "${PREFIX}/bin")
 #Dependencies
 
 SET(common_dp "glib-2.0 geofence-dbus dlog gio-2.0 capi-appfw-app-manager")
-SET(server_dp "${common_dp} network vconf vconf-internal-keys gthread-2.0  gio-unix-2.0 sqlite3 db-util alarm-service deviced capi-location-manager capi-network-bluetooth capi-network-wifi libcore-context-manager libtzplatform-config")
+SET(server_dp "${common_dp} network vconf vconf-internal-keys capi-system-info gthread-2.0  gio-unix-2.0 sqlite3 db-util alarm-service deviced capi-location-manager capi-network-bluetooth capi-network-wifi libcore-context-manager libtzplatform-config")
 SET(module_dp "${common_dp} gmodule-2.0 capi-geofence-manager")
 
 # Set required packages

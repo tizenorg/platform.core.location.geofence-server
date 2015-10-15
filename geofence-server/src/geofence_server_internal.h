@@ -35,7 +35,7 @@ gboolean _check_cell_db_existence (GeofenceServer *geofence_server, gboolean is_
 * @return		double
 * @retval		The min distance to next geofence
 */
-double _get_min_distance(double cur_lat, double cur_lon, GeofenceServer *geofence_server);
+double _get_min_distance(double cur_lat, double cur_lon, int *min_fence_id, GeofenceServer *geofence_server);
 
 /**
 * @brief	Gets the geofence using fence id

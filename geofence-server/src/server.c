@@ -286,6 +286,11 @@ int _geofence_initialize_geofence_server(GeofenceServer *geofence_server)
 		LOGD_GEOFENCE("location_manager_set_setting_changed_cb() failed(%d)", ret);
 		return -1;
 	}
+	ret = location_manager_set_setting_changed_cb(LOCATIONS_METHOD_WPS, __geofence_gps_setting_changed_cb, geofence_server);
+	if (LOCATIONS_ERROR_NONE != ret) {
+		LOGD_GEOFENCE("location_manager_set_setting_changed_cb() failed(%d)", ret);
+		return -1;
+	}
 
 	return 0;
 }

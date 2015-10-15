@@ -49,14 +49,14 @@ GeofenceItemData *__get_item_by_fence_id(gint fence_id, GeofenceServer *geofence
 	return (GeofenceItemData *)found_item->data;
 }
 
-double _get_min_distance(double cur_lat, double cur_lon, GeofenceServer *geofence_server)
+double _get_min_distance(double cur_lat, double cur_lon, int *min_fence_id, GeofenceServer *geofence_server)
 {
 	GList *fence_list = NULL;
 	GList *item_list = NULL;
 	int fence_id = 0;
 	GeofenceItemData *item_data = NULL;
 	geocoordinate_info_s *geocoordinate_info = NULL;
-	double min_dist = 100000.0, distance = 0.0;
+	double min_dist = -1.0, distance = 0.0;
 
 	fence_list = geofence_server->tracking_list;
 
@@ -70,12 +70,14 @@ double _get_min_distance(double cur_lat, double cur_lon, GeofenceServer *geofenc
 			geocoordinate_info = (geocoordinate_info_s *)item_data->priv;
 			/* get_current_position/ check_fence_in/out  for geoPoint*/
 			location_manager_get_distance(cur_lat, cur_lon,	geocoordinate_info->latitude, geocoordinate_info->longitude, &distance);
-			if (distance < min_dist)
+			if ((min_dist == -1.0) || (distance < min_dist)) {
 				min_dist = distance;
+				*min_fence_id = fence_id;
+			}
 		}
 		item_list = g_list_next(item_list);
 	}
-	LOGD_GEOFENCE("Min : %f", min_dist);
+	LOGD_GEOFENCE("Min fence_id: %d, Min distance : %f", *min_fence_id, min_dist);
 
 	return min_dist;
 }

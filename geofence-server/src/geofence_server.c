@@ -23,6 +23,8 @@
 #include <dd-display.h>
 #include <vconf.h>
 #include <vconf-internal-wifi-keys.h>
+#include <vconf-internal-dnet-keys.h>
+#include <vconf-internal-location-keys.h>
 #include "geofence_server_data_types.h"
 #include "geofence_server.h"
 #include "server.h"
@@ -34,29 +36,50 @@
 #include "geofence_server_internal.h"
 #include "geofence_server_bluetooth.h"
 #include <wifi.h>
+#include <network-wifi-intf.h>
+#include <system_info.h>
 
 #define TIZEN_ENGINEER_MODE
 #ifdef TIZEN_ENGINEER_MODE
 #include "geofence_server_log.h"
 #endif
 
-#define TIME_INTERVAL	5
+#define WPS_ACCURACY_TOLERANCE	100
+#define GPS_TRIGGER_BOUNDARY 1000
 #define SMART_ASSIST_HOME	1
 #define SMART_ASSIST_TIMEOUT			60	/* Refer to LPP */
 #define GEOFENCE_DEFAULT_RADIUS			200	/* Default 200 m */
-#define NPS_TIMEOUT				180
+#define GPS_TIMEOUT				60
+#define WPS_TIMEOUT				60
 
 #define MYPLACES_APPID	"org.tizen.myplace"
 #define DEFAULT_PLACE_HOME 1
 #define DEFAULT_PLACE_OFFICE 2
 #define DEFAULT_PLACE_CAR 3
 
-static int __nps_alarm_cb(alarm_id_t alarm_id, void *user_data);
-static int __nps_timeout_cb(alarm_id_t alarm_id, void *user_data);
+static int __gps_alarm_cb(alarm_id_t alarm_id, void *user_data);
+static int __wps_alarm_cb(alarm_id_t alarm_id, void *user_data);
+static int __gps_timeout_cb(alarm_id_t alarm_id, void *user_data);
+static int __wps_timeout_cb(alarm_id_t alarm_id, void *user_data);
 static void __add_left_fences(gpointer user_data);
 static void __start_activity_service(GeofenceServer *geofence_server);
 static void __stop_activity_service(GeofenceServer *geofence_server);
+static void __set_interval_for_gps(double min_distance, int min_fence_id, void *user_data);
 static void __activity_cb(activity_type_e type, const activity_data_h data, double timestamp, activity_error_e error, void *user_data);
+static bool __isWifiOn(void);
+static bool __isDataConnected(void);
+
+static bool __is_support_wps()
+{
+	const char *wps_feature = "http://tizen.org/feature/location.wps";
+	bool is_wps_supported = false;
+	system_info_get_platform_bool(wps_feature, &is_wps_supported);
+	if (is_wps_supported == true) {
+		location_manager_is_enabled_method(LOCATIONS_METHOD_WPS, &is_wps_supported);
+	}
+
+	return is_wps_supported;
+}
 
 static const char *__convert_wifi_error_to_string(wifi_error_e err_type)
 {
@@ -173,30 +196,30 @@ static int __emit_fence_inout(GeofenceServer *geofence_server, int fence_id, geo
 	}
 
 	if (state == GEOFENCE_FENCE_STATE_IN) {
-		LOGD_GEOFENCE("FENCE_IN to be set, current state: %d",
-		              item_data->common_info.status);
+		/*LOGD_GEOFENCE("FENCE_IN to be set, current state: %d", item_data->common_info.status);*/
 		if (item_data->common_info.status != GEOFENCE_FENCE_STATE_IN) {
 			geofence_dbus_server_send_geofence_inout_changed(geofence_server->geofence_dbus_server,	item_data->common_info.appid, fence_id,	item_data->common_info.access_type, GEOFENCE_EMIT_STATE_IN);
 			if (item_data->client_status == GEOFENCE_CLIENT_STATUS_START) {
 				item_data->client_status = GEOFENCE_CLIENT_STATUS_RUNNING;
 			}
+			LOGD_GEOFENCE("%d : FENCE_IN", fence_id);
 #ifdef TIZEN_ENGINEER_MODE
-			GEOFENCE_PRINT_LOG("FENCE_IN")
+			GEOFENCE_PRINT_LOG("FENCE_IN");
 #endif
 		}
 
 		item_data->common_info.status = GEOFENCE_FENCE_STATE_IN;
 
 	} else if (state == GEOFENCE_FENCE_STATE_OUT) {
-		LOGD_GEOFENCE("FENCE_OUT to be set, current state: %d",
-		              item_data->common_info.status);
+		/*LOGD_GEOFENCE("FENCE_OUT to be set, current state: %d", item_data->common_info.status);*/
 		if (item_data->common_info.status != GEOFENCE_FENCE_STATE_OUT) {
 			geofence_dbus_server_send_geofence_inout_changed(geofence_server->geofence_dbus_server,	item_data->common_info.appid, fence_id,	item_data->common_info.access_type, GEOFENCE_EMIT_STATE_OUT);
 			if (item_data->client_status ==	GEOFENCE_CLIENT_STATUS_START) {
 				item_data->client_status = GEOFENCE_CLIENT_STATUS_RUNNING;
 			}
+			LOGD_GEOFENCE("%d : FENCE_OUT", fence_id);
 #ifdef TIZEN_ENGINEER_MODE
-			GEOFENCE_PRINT_LOG("FENCE_OUT")
+			GEOFENCE_PRINT_LOG("FENCE_OUT");
 #endif
 		} else {
 			LOGD_GEOFENCE("Fence status [%d]", item_data->common_info.status);
@@ -213,28 +236,21 @@ static void __check_inout_by_gps(double latitude, double longitude, int fence_id
 {
 	FUNC_ENTRANCE_SERVER;
 	double distance = 0.0;
-	LOGD_GEOFENCE("fence_id [%d]", fence_id);
 	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
 	GeofenceItemData *item_data = __get_item_by_fence_id(fence_id, geofence_server);
 	if (!item_data || item_data->client_status == GEOFENCE_CLIENT_STATUS_NONE)
 		return;
 
-	location_accuracy_level_e level = 0;
-	double horizontal = 0.0;
-	double vertical = 0.0;
 	geofence_fence_state_e status = GEOFENCE_FENCE_STATE_OUT;
-
 	geocoordinate_info_s *geocoordinate_info = (geocoordinate_info_s *)item_data->priv;
-
 	/* get_current_position/ check_fence_in/out  for geoPoint */
-	location_manager_get_accuracy(geofence_server->loc_manager, &level, &horizontal, &vertical);
 	location_manager_get_distance(latitude, longitude, geocoordinate_info->latitude, geocoordinate_info->longitude,	&distance);
 
 	if (distance >= geocoordinate_info->radius) {
-		LOGD_GEOFENCE("FENCE_OUT : based on distance. Distance[%f]", distance);
+		LOGD_GEOFENCE("FENCE_OUT : based on distance. Distance[%f] for fence id: %d", distance, fence_id);
 		status = GEOFENCE_FENCE_STATE_OUT;
 	} else {
-		LOGD_GEOFENCE("FENCE_IN : based on distance. Distance[%f]", distance);
+		LOGD_GEOFENCE("FENCE_IN : based on distance. Distance[%f] for fence id: %d", distance, fence_id);
 		status = GEOFENCE_FENCE_STATE_IN;
 	}
 
@@ -243,25 +259,45 @@ static void __check_inout_by_gps(double latitude, double longitude, int fence_id
 	}
 }
 
+static void __stop_gps_alarms(void *user_data)
+{
+	FUNC_ENTRANCE_SERVER;
+	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
+	/*Stop the gps interval alarm if it is running...*/
+	if (geofence_server->gps_alarm_id != -1) {
+		/*LOGI_GEOFENCE("GPS interval timer removed. ID[%d]", geofence_server->gps_alarm_id);*/
+		geofence_server->gps_alarm_id = _geofence_remove_alarm(geofence_server->gps_alarm_id);
+	}
+	/*Stop the timeout alarm if it is running...*/
+	if (geofence_server->gps_timeout_alarm_id != -1) {
+		/*LOGI_GEOFENCE("Timeout timer removed for gps. ID[%d]", geofence_server->gps_timeout_alarm_id);*/
+		geofence_server->gps_timeout_alarm_id = _geofence_remove_alarm(geofence_server->gps_timeout_alarm_id);
+	}
+}
+
+static void __stop_wps_alarms(void *user_data)
+{
+	FUNC_ENTRANCE_SERVER;
+	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
+	/*Stop the wps interval alarm if it is running...*/
+	if (geofence_server->wps_alarm_id != -1) {
+		/*LOGI_GEOFENCE("WPS interval timer removed. ID[%d]", geofence_server->wps_alarm_id);*/
+		geofence_server->wps_alarm_id = _geofence_remove_alarm(geofence_server->wps_alarm_id);
+	}
+	/*Stop the timeout alarm if it is running...*/
+	if (geofence_server->wps_timeout_alarm_id != -1) {
+		/*LOGI_GEOFENCE("Timeout timer removed for wps. ID[%d]", geofence_server->wps_timeout_alarm_id);*/
+		geofence_server->wps_timeout_alarm_id = _geofence_remove_alarm(geofence_server->wps_timeout_alarm_id);
+	}
+}
+
 static void __check_current_location_cb(double latitude, double longitude, double altitude, time_t timestamp, void *user_data)
 {
 	FUNC_ENTRANCE_SERVER;
 	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
-	location_accuracy_level_e level;
-	double hor_acc = 0.0;
-	double ver_acc = 0.0;
-	int ret = 0;
 	int fence_id = 0;
 	GList *tracking_list = NULL;
 	GeofenceItemData *item_data = NULL;
-
-	ret = location_manager_get_accuracy(geofence_server->loc_manager, &level, &hor_acc, &ver_acc);
-	if (ret == LOCATIONS_ERROR_NONE) {
-		LOGD_GEOFENCE("hor_acc:%f, ver_acc:%f", hor_acc, ver_acc);
-	}
-	if (hor_acc > 500) {
-		return;
-	}
 
 	LOGD_GEOFENCE("Traversing the tracking list");
 	tracking_list = g_list_first(geofence_server->tracking_list);
@@ -279,28 +315,226 @@ static void __check_current_location_cb(double latitude, double longitude, doubl
 		}
 		tracking_list = g_list_next(tracking_list);
 	}
-	LOGD_GEOFENCE("Unsetting the position_updated_cb");
-	location_manager_unset_position_updated_cb(geofence_server->loc_manager);
-	location_manager_stop(geofence_server->loc_manager);
-	geofence_server->loc_started = FALSE;
 }
 
-static void __geofence_position_changed_cb(double latitude, double longitude, double altitude, time_t timestamp, void *user_data)
+static int __start_wps_positioning(GeofenceServer *geofence_server, location_position_updated_cb callback)
+{
+	FUNC_ENTRANCE_SERVER;
+	g_return_val_if_fail(geofence_server, -1);
+	int ret = FENCE_ERR_NONE;
+
+	if (geofence_server->loc_wps_manager == NULL) {
+		ret = location_manager_create(LOCATIONS_METHOD_WPS, &geofence_server->loc_wps_manager);
+		if (ret != LOCATIONS_ERROR_NONE) {
+			LOGD_GEOFENCE("Fail to create location_manager_h for wps: %d", ret);
+			return FENCE_ERR_UNKNOWN;
+		}
+	}
+	if (geofence_server->loc_wps_started == FALSE) {
+		ret = location_manager_set_position_updated_cb(geofence_server->loc_wps_manager, callback, 1, (void *) geofence_server);
+		if (ret != LOCATIONS_ERROR_NONE) {
+			LOGD_GEOFENCE("Fail to set callback for wps. %d", ret);
+			return FENCE_ERR_UNKNOWN;
+		}
+		ret = location_manager_start(geofence_server->loc_wps_manager);
+		if (ret != LOCATIONS_ERROR_NONE) {
+			LOGD_GEOFENCE("Fail to start. %d", ret);
+			location_manager_unset_position_updated_cb(geofence_server->loc_wps_manager);
+			location_manager_destroy(geofence_server->loc_wps_manager);
+			geofence_server->loc_wps_manager = NULL;
+			return FENCE_ERR_UNKNOWN;
+		}
+		if (geofence_server->wps_timeout_alarm_id == -1)
+			geofence_server->wps_timeout_alarm_id =	_geofence_add_alarm(WPS_TIMEOUT, __wps_timeout_cb, geofence_server);
+
+		geofence_server->loc_wps_started = TRUE;
+	} else {
+		LOGD_GEOFENCE("loc_wps_started TRUE");
+	}
+
+	return ret;
+}
+
+static int __start_gps_positioning(GeofenceServer *geofence_server, location_position_updated_cb callback)
+{
+	FUNC_ENTRANCE_SERVER;
+	g_return_val_if_fail(geofence_server, -1);
+	int ret = FENCE_ERR_NONE;
+
+	if (geofence_server->loc_gps_manager == NULL) {
+		ret = location_manager_create(LOCATIONS_METHOD_GPS, &geofence_server->loc_gps_manager);
+		if (ret != LOCATIONS_ERROR_NONE) {
+			LOGD_GEOFENCE("Fail to create location_manager_h: %d", ret);
+			return FENCE_ERR_UNKNOWN;
+		}
+	}
+
+	if (geofence_server->loc_gps_started == FALSE) {
+		ret = location_manager_set_position_updated_cb(geofence_server->loc_gps_manager, callback, geofence_server->gps_trigger_interval, (void *) geofence_server);
+		if (ret != LOCATIONS_ERROR_NONE) {
+			LOGD_GEOFENCE("Fail to set callback. %d", ret);
+			return FENCE_ERR_UNKNOWN;
+		}
+
+		ret = location_manager_start(geofence_server->loc_gps_manager);
+		if (ret != LOCATIONS_ERROR_NONE) {
+			LOGD_GEOFENCE("Fail to start. %d", ret);
+			location_manager_unset_position_updated_cb(geofence_server->loc_gps_manager);
+			location_manager_destroy(geofence_server->loc_gps_manager);
+			geofence_server->loc_gps_manager = NULL;
+			return FENCE_ERR_UNKNOWN;
+		}
+		if (geofence_server->gps_timeout_alarm_id == -1)
+			geofence_server->gps_timeout_alarm_id =	_geofence_add_alarm(GPS_TIMEOUT, __gps_timeout_cb, geofence_server);
+
+		geofence_server->loc_gps_started = TRUE;
+	} else {
+		LOGD_GEOFENCE("loc_gps_started TRUE");
+	}
+
+	return ret;
+}
+
+static void __stop_gps_positioning(gpointer userdata)
+{
+	FUNC_ENTRANCE_SERVER;
+	g_return_if_fail(userdata);
+	GeofenceServer *geofence_server = (GeofenceServer *) userdata;
+	int ret = 0;
+	if (geofence_server->loc_gps_started == TRUE) {
+		ret = location_manager_stop(geofence_server->loc_gps_manager);
+		if (ret != LOCATIONS_ERROR_NONE) {
+			return;
+		}
+		geofence_server->loc_gps_started = FALSE;
+		ret = location_manager_unset_position_updated_cb(geofence_server->loc_gps_manager);
+		if (ret != LOCATIONS_ERROR_NONE) {
+			return;
+		}
+	}
+
+	if (geofence_server->loc_gps_manager != NULL) {
+		ret = location_manager_destroy(geofence_server->loc_gps_manager);
+		if (ret != LOCATIONS_ERROR_NONE) {
+			return;
+		}
+		geofence_server->loc_gps_manager = NULL;
+	}
+}
+
+static void __stop_wps_positioning(gpointer userdata)
+{
+	FUNC_ENTRANCE_SERVER;
+	g_return_if_fail(userdata);
+	GeofenceServer *geofence_server = (GeofenceServer *) userdata;
+	int ret = 0;
+	if (geofence_server->loc_wps_started == TRUE) {
+		ret = location_manager_stop(geofence_server->loc_wps_manager);
+		if (ret != LOCATIONS_ERROR_NONE) {
+			LOGI_GEOFENCE("Unable to stop the wps");
+			return;
+		}
+		geofence_server->loc_wps_started = FALSE;
+		ret = location_manager_unset_position_updated_cb(geofence_server->loc_wps_manager);
+		if (ret != LOCATIONS_ERROR_NONE) {
+			LOGI_GEOFENCE("Unable to unset the callback");
+			return;
+		}
+	}
+
+	if (geofence_server->loc_wps_manager != NULL) {
+		ret = location_manager_destroy(geofence_server->loc_wps_manager);
+		if (ret != LOCATIONS_ERROR_NONE) {
+			LOGI_GEOFENCE("Unable to destroy the wps manager");
+			return;
+		}
+		geofence_server->loc_wps_manager = NULL;
+	}
+}
+
+static void __process_best_location(GeofenceServer *geofence_server)
+{
+	FUNC_ENTRANCE_SERVER;
+
+	int gpsdiff = 0;
+	int wpsdiff = 0;
+	int current_time = 0;
+
+	/* Check if any of the fix is null just return. It doesn't make sense to compare if only one fix is available*/
+	if (geofence_server->gps_fix_info == NULL || geofence_server->wps_fix_info == NULL)
+		return;
+
+	/* Calculate the time difference*/
+	current_time = (g_get_real_time()/1000000);
+	gpsdiff = current_time - geofence_server->gps_fix_info->timestamp;
+	wpsdiff = current_time - geofence_server->wps_fix_info->timestamp;
+
+	if (gpsdiff < wpsdiff) {
+		if ((geofence_server->gps_fix_info->timestamp - geofence_server->wps_fix_info->timestamp) <= 20) {
+			if (geofence_server->gps_fix_info->accuracy <= geofence_server->wps_fix_info->accuracy) {
+				LOGI_GEOFENCE("Using GPS fix");
+				__check_current_location_cb(geofence_server->gps_fix_info->latitude, geofence_server->gps_fix_info->longitude, 0.0, geofence_server->gps_fix_info->timestamp, geofence_server);
+			} else {
+				LOGI_GEOFENCE("Using WPS fix");
+				__check_current_location_cb(geofence_server->wps_fix_info->latitude, geofence_server->wps_fix_info->longitude, 0.0, geofence_server->wps_fix_info->timestamp, geofence_server);
+			}
+		} else {
+			LOGI_GEOFENCE("Time diff is more. So using latest GPS fix");
+			__check_current_location_cb(geofence_server->gps_fix_info->latitude, geofence_server->gps_fix_info->longitude, 0.0, geofence_server->gps_fix_info->timestamp, geofence_server);
+		}
+	} else {
+		if ((geofence_server->wps_fix_info->timestamp - geofence_server->gps_fix_info->timestamp) <= 20) {
+			if (geofence_server->wps_fix_info->accuracy <= geofence_server->gps_fix_info->accuracy) {
+				LOGI_GEOFENCE("Using WPS fix");
+				__check_current_location_cb(geofence_server->wps_fix_info->latitude, geofence_server->wps_fix_info->longitude, 0.0, geofence_server->wps_fix_info->timestamp, geofence_server);
+			} else {
+				LOGI_GEOFENCE("Using GPS fix");
+				__check_current_location_cb(geofence_server->gps_fix_info->latitude, geofence_server->gps_fix_info->longitude, 0.0, geofence_server->gps_fix_info->timestamp, geofence_server);
+			}
+		} else {
+			LOGI_GEOFENCE("Time diff is more. So using latest WPS fix");
+			__check_current_location_cb(geofence_server->wps_fix_info->latitude, geofence_server->wps_fix_info->longitude, 0.0, geofence_server->wps_fix_info->timestamp, geofence_server);
+		}
+	}
+}
+
+static void __geofence_standalone_gps_position_changed_cb(double latitude, double longitude, double altitude, time_t timestamp, void *user_data)
 {
 	FUNC_ENTRANCE_SERVER;
 	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
 	double distance = 0;
 	int interval = 0;
+	int min_fence_id = 0;
+	double hor_acc = 0.0;
+	double ver_acc = 0.0;
+	location_accuracy_level_e level;
+	int ret = LOCATIONS_ERROR_NONE;
+
+	/* Allocate memory for the location_info structure */
+	if (geofence_server->gps_fix_info == NULL) {
+		geofence_server->gps_fix_info = (location_fix_info_s *)g_malloc(sizeof(location_fix_info_s));
+	}
+	/* Store the location information in the structure for future use*/
+	if (geofence_server->gps_fix_info != NULL) {
+		geofence_server->gps_fix_info->latitude = latitude;
+		geofence_server->gps_fix_info->longitude = longitude;
+		ret = location_manager_get_accuracy(geofence_server->loc_gps_manager, &level, &hor_acc, &ver_acc);
+		if (ret == LOCATIONS_ERROR_NONE) {
+			LOGI_GEOFENCE("hor_acc:%f, ver_acc:%f", hor_acc, ver_acc);
+			LOGD_GEOFENCE("*****Lat: %f  Lon: %f********", latitude, longitude);
+			geofence_server->gps_fix_info->accuracy = hor_acc;
+		}
+	}
 	/*Remove the timeout callback that might be running when requesting for fix.*/
-	if (geofence_server->nps_timeout_alarm_id != -1) {
-		LOGI_GEOFENCE("Removing the timeout alarm from restart gps");
-		geofence_server->nps_timeout_alarm_id =	_geofence_remove_alarm(geofence_server->nps_timeout_alarm_id);
+	if (geofence_server->gps_timeout_alarm_id != -1) {
+		/*LOGI_GEOFENCE("Removing the timeout alarm from restart gps");*/
+		geofence_server->gps_timeout_alarm_id =	_geofence_remove_alarm(geofence_server->gps_timeout_alarm_id);
 	}
 	geofence_server->last_loc_time = timestamp;
 	__check_current_location_cb(latitude, longitude, altitude, timestamp, user_data);
 
 	/* Distance based alarm */
-	distance = _get_min_distance(latitude, longitude, geofence_server);
+	distance = _get_min_distance(latitude, longitude, &min_fence_id, geofence_server);
 
 	if (distance < 200) {
 		LOGD_GEOFENCE("interval: 1 secs");
@@ -344,14 +578,193 @@ static void __geofence_position_changed_cb(double latitude, double longitude, do
 		interval = interval * 5;
 	else if (geofence_server->activity_type == ACTIVITY_RUN)
 		interval = interval * 3;
+	LOGD_GEOFENCE("Unsetting the position_updated_cb");
+	location_manager_unset_position_updated_cb(geofence_server->loc_gps_manager);
+	location_manager_stop(geofence_server->loc_gps_manager);
+	geofence_server->loc_gps_started = FALSE;
 
-	LOGI_GEOFENCE("Setting the interval of alrm %d s", interval);
-
-	if (geofence_server->nps_alarm_id == -1) {
-		LOGI_GEOFENCE("Setting the nps alarm from the callback");
-		geofence_server->nps_alarm_id =	_geofence_add_alarm(interval, __nps_alarm_cb, geofence_server);
+	LOGI_GEOFENCE("Setting the gps interval of alrm %d s", interval);
+	if (geofence_server->gps_alarm_id == -1) {
+		LOGI_GEOFENCE("Setting the gps alarm from the callback");
+		geofence_server->gps_alarm_id =	_geofence_add_alarm(interval, __gps_alarm_cb, geofence_server);
 	}
-	return;
+}
+
+static void __geofence_gps_position_changed_cb(double latitude, double longitude, double altitude, time_t timestamp, void *user_data)
+{
+	FUNC_ENTRANCE_SERVER;
+	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
+	double hor_acc = 0.0;
+	double ver_acc = 0.0;
+	GeofenceItemData *item_data = NULL;
+	int min_fence_id = -1;
+	int min_distance = 0;
+	location_accuracy_level_e level;
+	int ret = LOCATIONS_ERROR_NONE;
+
+	/*Remove the timeout callback that might be running when requesting for fix.*/
+	if (geofence_server->gps_timeout_alarm_id != -1) {
+		/*LOGI_GEOFENCE("Removing the timeout alarm from restart gps");*/
+		geofence_server->gps_timeout_alarm_id =	_geofence_remove_alarm(geofence_server->gps_timeout_alarm_id);
+	}
+
+	/* Allocate memory for the location_info structure */
+	if (geofence_server->gps_fix_info == NULL) {
+		geofence_server->gps_fix_info = (location_fix_info_s *)g_malloc(sizeof(location_fix_info_s));
+	}
+
+	/* Store the location information in the structure for future use*/
+	if (geofence_server->gps_fix_info != NULL) {
+		geofence_server->gps_fix_info->latitude = latitude;
+		geofence_server->gps_fix_info->longitude = longitude;
+		geofence_server->gps_fix_info->timestamp = (g_get_real_time()/1000000); /* microsecs->millisecs->secs */
+		ret = location_manager_get_accuracy(geofence_server->loc_gps_manager, &level, &hor_acc, &ver_acc);
+		if (ret == LOCATIONS_ERROR_NONE) {
+			LOGD_GEOFENCE("hor_acc:%f, ver_acc:%f", hor_acc, ver_acc);
+			LOGD_GEOFENCE("*****Lat: %f  Lon: %f********", latitude, longitude);
+			geofence_server->gps_fix_info->accuracy = hor_acc;
+		}
+	}
+	geofence_server->last_loc_time = timestamp;
+
+	if (geofence_server->wps_fix_info) {
+		LOGI_GEOFENCE("Going for fix comparison from gps fix");
+		__process_best_location(geofence_server);
+	} else {
+		LOGI_GEOFENCE("Emitting from GPS fix directly");
+		__check_current_location_cb(latitude, longitude, altitude, timestamp, user_data);
+	}
+
+	location_manager_unset_position_updated_cb(geofence_server->loc_gps_manager);
+	location_manager_stop(geofence_server->loc_gps_manager);
+	geofence_server->loc_gps_started = FALSE;
+
+	/*Get minimum distance and fence_id of the nearest tracking fence*/
+	if (geofence_server->gps_fix_info) {
+		min_distance = _get_min_distance(geofence_server->gps_fix_info->latitude, geofence_server->gps_fix_info->longitude, &min_fence_id, geofence_server);
+		item_data = __get_item_by_fence_id(min_fence_id, geofence_server);
+		if (item_data && geofence_server->loc_gps_started_by_wps == TRUE) {
+			LOGI_GEOFENCE("******Setting the GPS interval******");
+			__set_interval_for_gps(min_distance, min_fence_id, user_data);
+		}
+	}
+}
+
+static void __set_interval_for_gps(double min_distance, int min_fence_id, void *user_data)
+{
+	FUNC_ENTRANCE_SERVER;
+	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
+	GeofenceItemData *item_data = NULL;
+	item_data = __get_item_by_fence_id(min_fence_id, geofence_server);
+	if (item_data && geofence_server->gps_fix_info) {
+		geocoordinate_info_s *geocoordinate_info = (geocoordinate_info_s *)item_data->priv;
+		if (geofence_server->gps_trigger_interval == 1 && (min_distance > (geocoordinate_info->radius + 100 + geofence_server->gps_fix_info->accuracy) && min_distance <= (geocoordinate_info->radius + 1000))) {
+			LOGI_GEOFENCE("Setting the GPS interval as 5 secs");
+			geofence_server->gps_trigger_interval = 5;
+			/*LOGI_GEOFENCE("(GPS SWITCH) GPS changed from 1 to 5 sec at lat:%f, lon:%f for fence_id:%d at distance:%f", geofence_server->gps_fix_info->latitude, geofence_server->gps_fix_info->longitude, min_fence_id, min_distance);*/
+		} else if (geofence_server->gps_trigger_interval == 5 && min_distance <= (geocoordinate_info->radius + 100 + geofence_server->gps_fix_info->accuracy)) {
+			LOGI_GEOFENCE("Setting the GPS interval as 1 secs");
+			geofence_server->gps_trigger_interval = 1;
+			/*LOGI_GEOFENCE("(GPS SWITCH) GPS changed from 5 to 1 sec at lat:%f, lon:%f for fence_id:%d at distance:%f", geofence_server->gps_fix_info->latitude, geofence_server->gps_fix_info->longitude, min_fence_id, min_distance);*/
+		} else if (min_distance > (geocoordinate_info->radius + 1000)) {
+			/* Already stopped. Just that GPS trigger alarm wont be scheduled again */
+			/*LOGI_GEOFENCE("(GPS TRIGGER) GPS stopped at lat:%f, lon:%f for fence:%d at distance:%f", geofence_server->gps_fix_info->latitude, geofence_server->gps_fix_info->longitude, min_fence_id, min_distance);*/
+			geofence_server->loc_gps_started_by_wps = false;
+		}
+		if (geofence_server->loc_gps_started_by_wps == true) {
+			LOGI_GEOFENCE("Setting the gps interval of %d secs during wps session", geofence_server->gps_trigger_interval);
+			if (geofence_server->gps_alarm_id == -1) {
+				LOGI_GEOFENCE("Setting the gps alarm from the callback");
+				geofence_server->gps_alarm_id = _geofence_add_alarm(geofence_server->gps_trigger_interval, __gps_alarm_cb, geofence_server);
+			}
+		}
+	}
+}
+
+static void __geofence_wps_position_changed_cb(double latitude, double longitude, double altitude, time_t timestamp, void *user_data)
+{
+	FUNC_ENTRANCE_SERVER;
+	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
+	GeofenceItemData *item_data = NULL;
+	double min_distance = 0.0;
+	int min_fence_id = 0;
+	double hor_acc = 0.0;
+	double ver_acc = 0.0;
+	location_accuracy_level_e level;
+	int ret = LOCATIONS_ERROR_NONE;
+	int interval = 0;
+
+	/* Allocate memory for the location_info structure */
+	if (geofence_server->wps_fix_info == NULL) {
+		geofence_server->wps_fix_info = (location_fix_info_s *)g_malloc(sizeof(location_fix_info_s));
+	}
+	 /*Remove the timeout callback that might be running when requesting for fix.*/
+	if (geofence_server->wps_timeout_alarm_id != -1) {
+		/*LOGI_GEOFENCE("Removing the timeout alarm from restart gps");*/
+		geofence_server->wps_timeout_alarm_id = _geofence_remove_alarm(geofence_server->wps_timeout_alarm_id);
+	}
+	/* Store the location information in the structure for future use*/
+	if (geofence_server->wps_fix_info != NULL) {
+		geofence_server->wps_fix_info->latitude = latitude;
+		geofence_server->wps_fix_info->longitude = longitude;
+		geofence_server->wps_fix_info->timestamp = (g_get_real_time()/1000000); /* microsecs->millisecs->secs */
+		ret = location_manager_get_accuracy(geofence_server->loc_wps_manager, &level, &hor_acc, &ver_acc);
+		if (ret == LOCATIONS_ERROR_NONE) {
+			LOGD_GEOFENCE("hor_acc:%f, ver_acc:%f", hor_acc, ver_acc);
+			LOGD_GEOFENCE("*****Lat: %f  Lon: %f********", latitude, longitude);
+			geofence_server->wps_fix_info->accuracy = hor_acc;
+		}
+	} else {
+		LOGD_GEOFENCE("Invalid WPS fix data");
+		return;
+	}
+
+	/*Get minimum distance and fence_id of the nearest tracking fence*/
+	min_distance = _get_min_distance(latitude, longitude, &min_fence_id, geofence_server);
+	LOGI_GEOFENCE("Nearest fence id: %d, distance: %f", min_fence_id, min_distance);
+
+	item_data = __get_item_by_fence_id(min_fence_id, geofence_server);
+
+	if (!item_data)
+		return;/* There is no valid fence with this fence id. So return*/
+
+	geocoordinate_info_s *geocoordinate_info = (geocoordinate_info_s *)item_data->priv;
+
+	if (geofence_server->loc_gps_started_by_wps == FALSE && geofence_server->loc_gps_started == FALSE) { /* && geofence_server->wps_fix_info->accuracy > WPS_ACCURACY_TOLERANCE) { */
+		if (min_distance <= (geocoordinate_info->radius + GPS_TRIGGER_BOUNDARY)) {
+			LOGD_GEOFENCE("Triggering GPS");
+			/*LOGD_GEOFENCE("(GPS TRIGGER) GPS started at lat:%f, lon:%f for fence_id:%d at distance:%f", latitude, longitude, min_fence_id, min_distance);*/
+			if (FENCE_ERR_NONE == __start_gps_positioning(geofence_server, __geofence_gps_position_changed_cb))
+				geofence_server->loc_gps_started_by_wps = true;
+			else
+				LOGI_GEOFENCE("Error starting GPS/ GPS is off");
+		}
+		__check_current_location_cb(latitude, longitude, altitude, timestamp, user_data);
+	}
+
+	double interval_dist = (min_distance - geocoordinate_info->radius) - geofence_server->wps_fix_info->accuracy;
+	LOGI_GEOFENCE("Distance for interval: %f", interval_dist);
+	if (interval_dist < 15000) {
+		interval = interval_dist/25; /*secs*/ /*Assuming 90 km/hr of speed - So 25 mtrs covered in 1 sec*/
+	} else if (interval_dist >= 15000 && interval_dist < 18000) {
+		interval = 10 * 60; /* 10 mins */
+	} else if (interval_dist >= 18000 && interval_dist < 20000) {
+		interval = 12 * 60; /* 12 mins */
+	} else if (interval_dist >= 20000) {
+		interval = 15 * 60; /*15 mins*/
+	}
+	if (interval < 15)
+		interval = 15; /*15 sec */
+
+	location_manager_unset_position_updated_cb(geofence_server->loc_wps_manager);
+	location_manager_stop(geofence_server->loc_wps_manager);
+	geofence_server->loc_wps_started = FALSE;
+
+	LOGI_GEOFENCE("Setting the wps interval of %d secs", interval);
+	if (geofence_server->wps_alarm_id == -1) {
+		LOGI_GEOFENCE("Setting the wps alarm from the callback");
+		geofence_server->wps_alarm_id = _geofence_add_alarm(interval, __wps_alarm_cb, geofence_server);
+	}
 }
 
 static void __check_tracking_list(const char *bssid, void *user_data,
@@ -441,9 +854,14 @@ static void geofence_network_evt_cb(net_event_info_t *event_cb, void *user_data)
 	GList *tracking_fences = g_list_first(geofence_server->tracking_list);
 	GeofenceItemData *item_data = NULL;
 	int tracking_fence_id = 0;
+	net_wifi_state_t network_state = WIFI_UNKNOWN;
+	int ret = -1;
+	int wps_state = 0;
+	int gps_state = 0;
 
 	switch (event_cb->Event) {
 		case NET_EVENT_WIFI_SCAN_IND:
+
 			LOGD_GEOFENCE("Got WIFI scan Ind : %d\n", event_cb->Error);
 
 			net_profile_info_t *profiles = NULL;
@@ -479,99 +897,171 @@ static void geofence_network_evt_cb(net_event_info_t *event_cb, void *user_data)
 				}
 			}
 
-			break;
-		default:
-			break;
+		break;
+	case NET_EVENT_WIFI_POWER_IND:
+		LOGI_GEOFENCE("WIFI ON/OFF indication");
+		vconf_get_int(VCONFKEY_LOCATION_NETWORK_ENABLED, &wps_state);
+		vconf_get_int(VCONFKEY_LOCATION_ENABLED, &gps_state);
+		if (__is_support_wps() == true && geofence_server->running_geopoint_cnt > 0) {
+			ret = net_get_wifi_state(&network_state, (net_profile_name_t*)event_cb->ProfileName);
+			if (ret == 0) {
+				if (network_state == WIFI_OFF) {
+					LOGI_GEOFENCE("WIFI is OFF");
+					/* In Tizen device(Kiran) WPS is not supported if WIFI is switched off */
+					__stop_wps_positioning(geofence_server);
+					__stop_wps_alarms(geofence_server);
+					if (geofence_server->loc_gps_started_by_wps == true) {
+						__stop_gps_positioning(geofence_server); /*Stop the gps if it was started by wps*/
+						__stop_gps_alarms(geofence_server);
+						geofence_server->loc_gps_started_by_wps = false;
+					}
+					if (gps_state == 1) {
+						ret = __start_gps_positioning(geofence_server, __geofence_standalone_gps_position_changed_cb);
+						if (ret != FENCE_ERR_NONE) {
+							LOGE_GEOFENCE("Fail to start standalone gps positioning. Error[%d]", ret);
+						}
+					}
+				} else {
+					if (__isDataConnected() == true) {/*&& wps_state == 1) {*/
+						LOGI_GEOFENCE("DATA CONNECTION IS TRUE");
+						if (wps_state == 1) {
+							LOGI_GEOFENCE("WPS STATE IS 1");
+							__stop_gps_positioning(geofence_server); /* Stop the gps which is running as wps can be used*/
+							__stop_gps_alarms(geofence_server);
+							/**** Start the WPS as mobile data is connected and wifi and wps are on *******/
+							ret = __start_wps_positioning(geofence_server, __geofence_wps_position_changed_cb);
+							if (ret != FENCE_ERR_NONE) {
+								LOGE_GEOFENCE("Fail to start wps positioning. Error[%d]", ret);
+							}
+						}
+					}
+				}
+			}
+		} else {
+			LOGE_GEOFENCE("WPS is not supported");
+		}
+		break;
+	case NET_EVENT_OPEN_IND:
+		LOGI_GEOFENCE("Mobile internet connected");
+		vconf_get_int(VCONFKEY_LOCATION_NETWORK_ENABLED, &wps_state);
+		if (__is_support_wps() == true && geofence_server->running_geopoint_cnt > 0 && wps_state == 1 && __isWifiOn() == true && __isDataConnected() == true) {
+			/**** Start the WPS as mobile data is connected and wifi is on *******/
+			if (geofence_server->loc_gps_started_by_wps == false && geofence_server->loc_gps_started == true) {
+				__stop_gps_positioning(geofence_server); /*GPS should be stopped only if it is running standalone*/
+				__stop_gps_alarms(geofence_server);
+			}	
+			ret = __start_wps_positioning(geofence_server, __geofence_wps_position_changed_cb);
+			if (ret != FENCE_ERR_NONE) {
+				LOGE_GEOFENCE("Fail to start wps positioning. Error[%d]", ret);
+			}
+		}
+		break;
+	case NET_EVENT_CLOSE_IND:
+		LOGI_GEOFENCE("Mobile internet disconnected");
+		if (__is_support_wps() == true && geofence_server->running_geopoint_cnt > 0 && geofence_server->loc_wps_started == true) {
+			/***** Start standalone gps as mobile data is disconnected *****/
+			__stop_wps_positioning(geofence_server);
+			__stop_wps_alarms(geofence_server);
+			if (geofence_server->loc_gps_started_by_wps == true) {
+				__stop_gps_positioning(geofence_server); /*Stop the gps if it was started by wps*/
+				__stop_gps_alarms(geofence_server);
+				geofence_server->loc_gps_started_by_wps = false;
+			}
+			ret = __start_gps_positioning(geofence_server, __geofence_standalone_gps_position_changed_cb);
+			if (ret != FENCE_ERR_NONE) {
+				LOGE_GEOFENCE("Fail to start standalone gps positioning. Error[%d]", ret);
+			}
+		}
+		break;
+	default:
+		break;
 	}
 }
 
-static int __start_gps_positioning(GeofenceServer *geofence_server, location_position_updated_cb callback)
+static int __gps_timeout_cb(alarm_id_t alarm_id, void *user_data)
 {
-	FUNC_ENTRANCE_SERVER;
-	g_return_val_if_fail(geofence_server, -1);
-	int ret = FENCE_ERR_NONE;
-
-	if (geofence_server->loc_manager == NULL) {
-		ret = location_manager_create(LOCATIONS_METHOD_GPS, &geofence_server->loc_manager);
-		if (ret != LOCATIONS_ERROR_NONE) {
-			LOGD_GEOFENCE("Fail to create location_manager_h: %d", ret);
-			return FENCE_ERR_UNKNOWN;
-		}
-	}
-
-	if (geofence_server->loc_started == FALSE) {
-		ret = location_manager_set_position_updated_cb(geofence_server->loc_manager, callback, 1, (void *) geofence_server);
-		if (ret != LOCATIONS_ERROR_NONE) {
-			LOGD_GEOFENCE("Fail to set callback. %d", ret);
-			return FENCE_ERR_UNKNOWN;
-		}
-
-		ret = location_manager_start(geofence_server->loc_manager);
-		if (ret != LOCATIONS_ERROR_NONE) {
-			LOGD_GEOFENCE("Fail to start. %d", ret);
-			return FENCE_ERR_UNKNOWN;
-		}
-		if (geofence_server->nps_timeout_alarm_id == -1)
-			geofence_server->nps_timeout_alarm_id =	_geofence_add_alarm(NPS_TIMEOUT, __nps_timeout_cb, geofence_server);
-
-		geofence_server->loc_started = TRUE;
-	} else {
-		LOGD_GEOFENCE("loc_started TRUE");
-	}
-
-	return ret;
-}
-
-static void __stop_gps_positioning(gpointer userdata)
-{
-	FUNC_ENTRANCE_SERVER;
-	g_return_if_fail(userdata);
-	GeofenceServer *geofence_server = (GeofenceServer *) userdata;
-	int ret = 0;
-	if (geofence_server->loc_started == TRUE) {
-		ret = location_manager_stop(geofence_server->loc_manager);
-		if (ret != LOCATIONS_ERROR_NONE) {
-			return;
-		}
-		geofence_server->loc_started = FALSE;
-		ret = location_manager_unset_position_updated_cb
-		      (geofence_server->loc_manager);
-		if (ret != LOCATIONS_ERROR_NONE) {
-			return;
-		}
-	}
-
-	if (geofence_server->loc_manager != NULL) {
-		ret = location_manager_destroy(geofence_server->loc_manager);
-		if (ret != LOCATIONS_ERROR_NONE) {
-			return;
-		}
-		geofence_server->loc_manager = NULL;
-	}
-}
-
-static int __nps_timeout_cb(alarm_id_t alarm_id, void *user_data)
-{
-	LOGI_GEOFENCE("__nps_timeout_cb");
+	LOGI_GEOFENCE("__gps_timeout_cb");
 	g_return_val_if_fail(user_data, -1);
 	LOGD_GEOFENCE("alarm_id : %d", alarm_id);
 	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
-	geofence_server->nps_timeout_alarm_id = -1;	/*resetting the alarm id*/
+	geofence_server->gps_timeout_alarm_id = -1;	/*resetting the alarm id*/
 	/*Stop the gps for sometime when there is no fix*/
 	__stop_gps_positioning(geofence_server);
-	geofence_server->nps_alarm_id = _geofence_add_alarm(1 * 60, __nps_alarm_cb, geofence_server);
-	display_unlock_state(LCD_OFF, PM_RESET_TIMER);
+	if (geofence_server->loc_gps_started_by_wps == FALSE) {
+		geofence_server->gps_alarm_id = _geofence_add_alarm(1 * 60, __gps_alarm_cb, geofence_server);
+	} else {
+		geofence_server->loc_gps_started_by_wps = FALSE;
+	}
 	return 0;
 }
 
-static int __nps_alarm_cb(alarm_id_t alarm_id, void *user_data)
+static int __gps_alarm_cb(alarm_id_t alarm_id, void *user_data)
 {
-	LOGI_GEOFENCE("__nps_alarm_cb");
+	LOGI_GEOFENCE("__gps_alarm_cb");
+	g_return_val_if_fail(user_data, -1);
+	LOGD_GEOFENCE("gps alarm_id : %d", alarm_id);
+	int ret = FENCE_ERR_NONE;
+	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
+	if (geofence_server->gps_alarm_id != -1) {
+		/*LOGI_GEOFENCE("GPS interval timer removed. ID[%d]", geofence_server->gps_alarm_id);*/
+		geofence_server->gps_alarm_id = _geofence_remove_alarm(geofence_server->gps_alarm_id);
+		geofence_server->gps_alarm_id = -1;
+	}
+	if (geofence_server->loc_gps_started_by_wps == true) {
+		ret = __start_gps_positioning(geofence_server, __geofence_gps_position_changed_cb);
+		if (ret != FENCE_ERR_NONE) {
+			LOGE_GEOFENCE("Fail to start gps positioning. Error[%d]", ret);
+		}
+	} else {
+		ret = __start_gps_positioning(geofence_server, __geofence_standalone_gps_position_changed_cb);
+		if (ret != FENCE_ERR_NONE) {
+			LOGE_GEOFENCE("Fail to start standalone gps positioning. Error[%d]", ret);
+		}
+	}
+	return 0;
+}
+
+static int __wps_timeout_cb(alarm_id_t alarm_id, void *user_data)
+{
+	LOGI_GEOFENCE("__wps_timeout_cb");
 	g_return_val_if_fail(user_data, -1);
 	LOGD_GEOFENCE("alarm_id : %d", alarm_id);
 	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
-	__start_gps_positioning(geofence_server, __geofence_position_changed_cb);
-	geofence_server->nps_alarm_id = -1;
+	if (geofence_server->wps_timeout_alarm_id != -1) {
+		/*LOGI_GEOFENCE("WPS timeout timer removed. ID[%d]", geofence_server->wps_timeout_alarm_id);*/
+		geofence_server->wps_timeout_alarm_id = _geofence_remove_alarm(geofence_server->wps_timeout_alarm_id);
+		geofence_server->wps_timeout_alarm_id = -1;     /*resetting the alarm id*/
+	}
+	/*Stop the wps for sometime when there is no fix*/
+	__stop_wps_positioning(geofence_server);
+	geofence_server->wps_alarm_id = _geofence_add_alarm(10, __wps_alarm_cb, geofence_server);
+	/*display_unlock_state(LCD_OFF, PM_RESET_TIMER);*/
+	return 0;
+}
+
+static int __wps_alarm_cb(alarm_id_t alarm_id, void *user_data)
+{
+	LOGI_GEOFENCE("__wps_alarm_cb");
+	g_return_val_if_fail(user_data, -1);
+	LOGD_GEOFENCE("wps alarm_id : %d", alarm_id);
+	int ret = FENCE_ERR_NONE;
+	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
+	if (geofence_server->wps_alarm_id != -1) {
+		/*LOGI_GEOFENCE("WPS interval timer removed. ID[%d]", geofence_server->wps_alarm_id);*/
+		geofence_server->wps_alarm_id = _geofence_remove_alarm(geofence_server->wps_alarm_id);
+		geofence_server->wps_alarm_id = -1;
+	}
+	if (__is_support_wps() == true && __isWifiOn() == true && __isDataConnected() == true) {
+		ret = __start_wps_positioning(geofence_server, __geofence_wps_position_changed_cb);
+		if (ret != FENCE_ERR_NONE) {
+			LOGE_GEOFENCE("Fail to start wps positioning. Error[%d]", ret);
+		}
+	} else {
+		ret = __start_gps_positioning(geofence_server, __geofence_standalone_gps_position_changed_cb);
+		if (ret != FENCE_ERR_NONE) {
+			LOGE_GEOFENCE("Fail to start standalone gps positioning. Error[%d]", ret);
+		}
+	}
 	return 0;
 }
 
@@ -585,56 +1075,86 @@ static void gps_setting_changed_cb(location_method_e method, bool enable,
 	GeofenceItemData *item_data = NULL;
 	int tracking_fence_id = 0;
 	int ret = FENCE_ERR_NONE;
-	if (enable == false && geofence_server->running_geopoint_cnt > 0) {
-		LOGI_GEOFENCE("Stopping the GPS from settings callback");
-		__stop_gps_positioning(geofence_server);
+	int wps_state = 0;
+	int gps_state = 0;
+	/* Get the wps status */
+	vconf_get_int(VCONFKEY_LOCATION_NETWORK_ENABLED, &wps_state);
+	vconf_get_int(VCONFKEY_LOCATION_ENABLED, &gps_state);
 
-		/*Stop the interval alarm if it is running...*/
-		if (geofence_server->nps_alarm_id != -1) {
-			LOGI_GEOFENCE("Interval timer removed. ID[%d]", geofence_server->nps_alarm_id);
-			geofence_server->nps_alarm_id = _geofence_remove_alarm(geofence_server->nps_alarm_id);
-		}
-		/*stop the timeout alarm if it is running...*/
-		if (geofence_server->nps_timeout_alarm_id != -1) {
-			LOGI_GEOFENCE("Timeout timer removed. ID[%d]",
-			              geofence_server->nps_timeout_alarm_id);
-			geofence_server->nps_timeout_alarm_id =	_geofence_remove_alarm(geofence_server->nps_timeout_alarm_id);
-		}
-		while (tracking_fences) {
-			tracking_fence_id = GPOINTER_TO_INT(tracking_fences->data);
-			tracking_fences = g_list_next(tracking_fences);
-			item_data = __get_item_by_fence_id(tracking_fence_id, geofence_server);
-			if (item_data && item_data->common_info.type == GEOFENCE_TYPE_GEOPOINT) {
-				__emit_fence_inout(geofence_server, item_data->common_info.fence_id, GEOFENCE_FENCE_STATE_OUT);
+	if (enable == false && geofence_server->running_geopoint_cnt > 0) {
+		if (method == LOCATIONS_METHOD_GPS) {
+			LOGI_GEOFENCE("Stopping the GPS from settings callback");
+			__stop_gps_positioning(geofence_server);
+			__stop_gps_alarms(geofence_server);
+
+			if (wps_state == 0) { /* If data is connected then WPS will be running and alerts will be given through WPS*/
+				while (tracking_fences) {
+					tracking_fence_id = GPOINTER_TO_INT(tracking_fences->data);
+					tracking_fences = g_list_next(tracking_fences);
+					item_data = __get_item_by_fence_id(tracking_fence_id, geofence_server);
+					if (item_data && item_data->common_info.type == GEOFENCE_TYPE_GEOPOINT) {
+						__emit_fence_inout(geofence_server, item_data->common_info.fence_id, GEOFENCE_FENCE_STATE_OUT);
+					}
+				}
+			}
+		} else if (method == LOCATIONS_METHOD_WPS) {
+			LOGI_GEOFENCE("Stopping the WPS from settings callback");
+			__stop_wps_positioning(geofence_server);
+			__stop_wps_alarms(geofence_server);
+
+			if (gps_state == 0) { /* If data is connected then WPS will be running and alerts will be given through WPS*/
+				while (tracking_fences) {
+					tracking_fence_id = GPOINTER_TO_INT(tracking_fences->data);
+					tracking_fences = g_list_next(tracking_fences);
+					item_data = __get_item_by_fence_id(tracking_fence_id, geofence_server);
+					if (item_data && item_data->common_info.type == GEOFENCE_TYPE_GEOPOINT) {
+						__emit_fence_inout(geofence_server, item_data->common_info.fence_id, GEOFENCE_FENCE_STATE_OUT);
+					}
+				}
+				return;
+			}
+			/* stop the gps if it was started by WPS */
+			if (geofence_server->loc_gps_started_by_wps == true) {
+				__stop_gps_positioning(geofence_server);
+				__stop_gps_alarms(geofence_server);
+				geofence_server->loc_gps_started_by_wps = false; /*So that WPS will use GPS if needed in its next fix(wps fix)*/
+			}
+			if (geofence_server->loc_gps_started == false && gps_state == 1) {/*As WPS is turned off standalone GPS should be used for tracking the fence*/
+				ret = __start_gps_positioning(geofence_server, __geofence_standalone_gps_position_changed_cb);
+				if (ret != FENCE_ERR_NONE) {
+					LOGE_GEOFENCE("Fail to start gps positioning. Error[%d]", ret);
+					return;
+				}
 			}
 		}
+		if (geofence_server->loc_gps_started_by_wps == true) {
+			geofence_server->loc_gps_started_by_wps = false; /*So that WPS will use GPS if needed in its next fix(wps fix)*/
+		}
 	} else if (enable == true && geofence_server->running_geopoint_cnt > 0) {
-		ret = __start_gps_positioning(geofence_server, __geofence_position_changed_cb);
-		if (ret != FENCE_ERR_NONE) {
-			LOGE_GEOFENCE("Fail to start gps positioning. Error[%d]", ret);
-			return;
+		if (method == LOCATIONS_METHOD_GPS) {
+			geofence_server->loc_gps_started_by_wps = false; /* So that WPS will use GPS if needed in its next fix(wps fix) */
+			if (wps_state == 0) { /*If wps is on then WPS would be already running. So no need to start GPS*/
+				ret = __start_gps_positioning(geofence_server, __geofence_standalone_gps_position_changed_cb);
+				if (ret != FENCE_ERR_NONE) {
+					LOGE_GEOFENCE("Fail to start gps positioning. Error[%d]", ret);
+					return;
+				}
+			}
+		} else if (method == LOCATIONS_METHOD_WPS) {
+			if (__isWifiOn() == true && __isDataConnected() == true) {/* Start WPS positioning */
+				ret = __start_wps_positioning(geofence_server, __geofence_wps_position_changed_cb);
+				if (ret != FENCE_ERR_NONE) {
+					LOGE_GEOFENCE("Fail to start wps positioning. Error[%d]", ret);
+					return;
+				}
+			}
+			if (geofence_server->loc_wps_started == true) {/* If WPS is successfully started, switch off gps*/
+				__stop_gps_positioning(geofence_server);
+				__stop_gps_alarms(geofence_server);
+			}
 		}
 	}
 }
-
-#if 0 /* Not used */
-static int __check_fence_interval(alarm_id_t alarm_id, void *data)
-{
-	return TRUE;
-}
-
-static void __pause_geofence_service(void *userdata)
-{
-	FUNC_ENTRANCE_SERVER;
-	g_return_if_fail(userdata);
-}
-
-static void __resume_geofence_service(void *userdata)
-{
-	FUNC_ENTRANCE_SERVER;
-	g_return_if_fail(userdata);
-}
-#endif
 
 /*********************************THIS HAS TO BE USED ONLY FOR TESTING*********************************************/
 #ifdef __LOCAL_TEST__
@@ -776,20 +1296,20 @@ static void __stop_geofence_service(gint fence_id, const gchar *app_id, gpointer
 				LOGI_GEOFENCE("Removed geopoint fence: %d from tracking list", fence_id);
 
 				if (geofence_server->running_geopoint_cnt <= 0) {
-					/*Stopping GPS...*/
+					/*Stopping GPS...WPS*/
 					__stop_gps_positioning(geofence_server);
-
-					/*Stop the interval alarm if it is running...*/
-					if (geofence_server->nps_alarm_id != -1) {
-						LOGI_GEOFENCE("Interval timer removed. ID[%d]",	geofence_server->nps_alarm_id);
-						geofence_server->nps_alarm_id =	_geofence_remove_alarm(geofence_server->nps_alarm_id);
+					if (geofence_server->gps_fix_info != NULL) {
+						g_free(geofence_server->gps_fix_info);
+						geofence_server->gps_fix_info = NULL;
 					}
-					/*Stop the timeout alarm if it is running...*/
-					if (geofence_server->nps_timeout_alarm_id != -1) {
-						LOGI_GEOFENCE("Timeout timer removed. ID[%d]", geofence_server->nps_timeout_alarm_id);
-						geofence_server->nps_timeout_alarm_id =	_geofence_remove_alarm(geofence_server->nps_timeout_alarm_id);
+					geofence_server->loc_gps_started_by_wps = false;
+					__stop_wps_positioning(geofence_server);
+					if (geofence_server->wps_fix_info != NULL) {
+						g_free(geofence_server->wps_fix_info);
+						geofence_server->wps_fix_info = NULL;
 					}
-
+					__stop_gps_alarms(geofence_server);
+					__stop_wps_alarms(geofence_server);
 					__stop_activity_service(geofence_server);
 				}
 			} else if (item_data->common_info.type == GEOFENCE_TYPE_BT) {
@@ -821,6 +1341,44 @@ static void __stop_geofence_service(gint fence_id, const gchar *app_id, gpointer
 	}
 	/* Emit the error code */
 	__emit_fence_event(geofence_server, place_id, fence_id, access_type, app_id, GEOFENCE_SERVER_ERROR_NONE, GEOFENCE_MANAGE_FENCE_STOPPED);
+}
+
+
+static bool __isWifiOn(void)
+{
+	int network_state = -1;
+	vconf_get_int(VCONFKEY_WIFI_STATE, &network_state);
+        if (network_state == 0)
+                return false;
+	return true;
+}
+
+static bool __isDataConnected(void)
+{
+	bool isDataConnected = false;
+	int network_state = -1;
+	int data_state = -1;
+
+	int rv = vconf_get_int(VCONFKEY_NETWORK_WIFI_STATE, &network_state);
+	if (rv == 0) {
+		if (network_state == VCONFKEY_NETWORK_WIFI_CONNECTED) {
+			LOGI_GEOFENCE("USING WIFI DATA");
+			isDataConnected = true;
+		}
+	}
+	if (isDataConnected == false) {
+		rv = vconf_get_int(VCONFKEY_NETWORK_CELLULAR_STATE, &network_state);
+		if (rv == 0) {
+			if (network_state == VCONFKEY_NETWORK_CELLULAR_ON) {
+				rv = vconf_get_int(VCONFKEY_DNET_STATE, &data_state);
+				if (data_state == VCONFKEY_DNET_NORMAL_CONNECTED) {
+			        	LOGI_GEOFENCE("USING MOBILE DATA");
+			        	isDataConnected = true;
+				}
+			}
+		}
+	}
+	return isDataConnected;
 }
 
 static int dbus_add_fence_cb(const gchar *app_id,
@@ -1440,15 +1998,25 @@ static void dbus_start_geofence_cb(gint fence_id, const gchar *app_id, gpointer 
 	item_data->client_status = GEOFENCE_CLIENT_STATUS_START;
 
 	if (item_data->common_info.type == GEOFENCE_TYPE_GEOPOINT) {
-		ret = __start_gps_positioning(geofence_server, __geofence_position_changed_cb);
-		if (ret != FENCE_ERR_NONE) {
-			LOGE_GEOFENCE("Fail to start gps positioning. Error[%d]", ret);
-			geofence_manager_set_running_status(fence_id, (tracking_status - 1));
-			__emit_fence_event(geofence_server, place_id, fence_id,	ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_IPC, GEOFENCE_MANAGE_FENCE_STARTED);
-			return;
+
+		if (__is_support_wps() == true && __isDataConnected() == true && __isWifiOn() == true) {
+			ret = __start_wps_positioning(geofence_server, __geofence_wps_position_changed_cb);
+			if (ret != FENCE_ERR_NONE) {
+				LOGE_GEOFENCE("Fail to start wps positioning. Error[%d]", ret);
+				geofence_manager_set_running_status(fence_id, (tracking_status - 1));
+				__emit_fence_event(geofence_server, place_id, fence_id,	ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_IPC, GEOFENCE_MANAGE_FENCE_STARTED);
+				return;
+			}
+		} else {
+			ret = __start_gps_positioning(geofence_server, __geofence_standalone_gps_position_changed_cb);
+			if (ret != FENCE_ERR_NONE) {
+				LOGE_GEOFENCE("Fail to start gps positioning. Error[%d]", ret);
+				geofence_manager_set_running_status(fence_id, (tracking_status - 1));
+				__emit_fence_event(geofence_server, place_id, fence_id, ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_IPC, GEOFENCE_MANAGE_FENCE_STARTED);
+				return;
+			}
 		}
 		geofence_server->running_geopoint_cnt++;
-
 		__start_activity_service(geofence_server);
 	} else if (item_data->common_info.type == GEOFENCE_TYPE_BT) {
 		LOGI_GEOFENCE("fence_type [GEOFENCE_TYPE_BT]");
@@ -1939,11 +2507,17 @@ static void __init_geofencemanager(GeofenceServer *geofence_server)
 {
 	FUNC_ENTRANCE_SERVER;
 
-	geofence_server->loc_started = FALSE;
-
+	geofence_server->loc_gps_started_by_wps = false;
+	geofence_server->loc_gps_started = false;
+	geofence_server->loc_wps_started = false;
+	geofence_server->gps_fix_info = NULL;
+	geofence_server->wps_fix_info = NULL;
+	geofence_server->gps_trigger_interval = 1; /* 1 sec by default*/
 	geofence_server->timer_id = -1;
-	geofence_server->nps_alarm_id = -1;
-	geofence_server->nps_timeout_alarm_id = -1;
+	geofence_server->gps_alarm_id = -1;
+	geofence_server->wps_alarm_id = -1;
+	geofence_server->gps_timeout_alarm_id = -1;
+	geofence_server->wps_timeout_alarm_id = -1;
 	geofence_server->geofence_list = NULL;
 	geofence_server->tracking_list = NULL;
 	geofence_server->running_geopoint_cnt = 0;
@@ -2105,7 +2679,7 @@ static void _glib_log(const gchar *log_domain, GLogLevelFlags log_level, const g
 int main(int argc, char **argv)
 {
 	GeofenceServer *geofenceserver = NULL;
-
+	LOGI_GEOFENCE("----------------Starting Server -----------------------------");
 	/*Callback registrations*/
 	geofence_callbacks cb;
 	cb.bt_conn_state_changed_cb = bt_conn_state_changed;
@@ -2115,11 +2689,9 @@ int main(int argc, char **argv)
 	cb.network_evt_cb = geofence_network_evt_cb;
 	cb.bt_discovery_cb = bt_adapter_device_discovery_state_cb;
 	cb.gps_setting_changed_cb = gps_setting_changed_cb;
-
 #if !GLIB_CHECK_VERSION(2, 35, 0)
 	g_type_init();
 #endif
-
 	geofenceserver = g_new0(GeofenceServer, 1);
 	if (!geofenceserver) {
 		LOGI_GEOFENCE("GeofenceServer create fail");
