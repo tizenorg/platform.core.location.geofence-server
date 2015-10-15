@@ -63,4 +63,12 @@ void wifi_conn_state_changed(wifi_connection_state_e state, wifi_ap_h ap, void *
  * @see None.
  */
 void wifi_device_state_changed(wifi_device_state_e state, void *user_data);
+
+/**
+ * @brief	Wifi AP rssi level change
+ * @Param[in]	rssi_level	The level of the RSSI received
+ * @Param[in]	user_data	The user data
+ * @see None.
+**/
+void wifi_rssi_level_changed(wifi_rssi_level_e rssi_level, void *user_data);
 #endif /* GEOFENCE_MANAGER_WIFI_H_ */

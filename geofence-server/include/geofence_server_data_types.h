@@ -40,7 +40,7 @@ typedef enum {
 geofence_status_t;
 
 /**
- * This enumeration descript the geofence fence state.
+ * This enumeration describe the geofence fence state.
  */
 typedef enum {
     GEOFENCE_EMIT_STATE_UNCERTAIN = 0,
@@ -49,7 +49,7 @@ typedef enum {
 } geofence_emit_state_e;
 
 /**
- * This enumeration descript the geofence fence state.
+ * This enumeration describe the geofence fence state.
  */
 typedef enum {
     GEOFENCE_FENCE_STATE_UNCERTAIN = -1,
@@ -58,7 +58,25 @@ typedef enum {
 } geofence_fence_state_e;
 
 /**
- * This enumeration descript the geofence state.
+ * This enumeration describe the geofence proximity state.
+ */
+typedef enum {
+    GEOFENCE_PROXIMITY_UNCERTAIN = 0,
+    GEOFENCE_PROXIMITY_FAR,
+    GEOFENCE_PROXIMITY_NEAR,
+    GEOFENCE_PROXIMITY_IMMEDIATE,
+} geofence_proximity_state_e;
+
+typedef enum {
+    GEOFENCE_PROXIMITY_PROVIDER_LOCATION = 0,
+    GEOFENCE_PROXIMITY_PROVIDER_WIFI,
+    GEOFENCE_PROXIMITY_PROVIDER_BLUETOOTH,
+    GEOFENCE_PROXIMITY_PROVIDER_BLE,
+    GEOFENCE_PROXIMITY_PROVIDER_SENSOR,
+} geofence_proximity_provider_e;
+
+/**
+ * This enumeration describe the geofence state.
  */
 typedef enum {
     GEOFENCE_DIRECTION_BOTH = 0,

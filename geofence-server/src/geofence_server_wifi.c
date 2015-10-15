@@ -58,6 +58,67 @@ static void emit_wifi_geofence_inout_changed(GeofenceServer *geofence_server, in
 		free(app_id);
 }
 
+static void emit_wifi_geofence_proximity_changed(GeofenceServer *geofence_server, int fence_id, int fence_proximity_status)
+{
+	FUNC_ENTRANCE_SERVER
+	LOGD_GEOFENCE("emit_wifi_geofence_proximity_changed");
+	char *app_id = NULL;
+	int ret = FENCE_ERR_NONE;
+
+	ret = geofence_manager_get_appid_from_geofence(fence_id, &app_id);
+	if (ret != FENCE_ERR_NONE) {
+		LOGE("Error getting the app_id for fence id[%d]", fence_id);
+		return;
+	}
+	GeofenceItemData *item_data = __get_item_by_fence_id(fence_id, geofence_server);
+	if (item_data == NULL) {
+		LOGD_GEOFENCE("getting item data failed. fence_id [%d]", fence_id);
+		g_free(app_id);
+		return;
+	}
+
+	if (fence_proximity_status != item_data->common_info.proximity_status) {
+		geofence_dbus_server_send_geofence_proximity_changed(geofence_server->geofence_dbus_server, app_id, fence_id, item_data->common_info.access_type, fence_proximity_status, GEOFENCE_PROXIMITY_PROVIDER_WIFI);
+		item_data->common_info.proximity_status = fence_proximity_status;
+	}
+
+	if (app_id)
+		free(app_id);
+}
+
+void wifi_rssi_level_changed(wifi_rssi_level_e rssi_level, void *user_data)
+{
+	FUNC_ENTRANCE_SERVER
+	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
+	g_return_if_fail(geofence_server);
+	wifi_ap_h ap_h;
+	char *bssid = NULL;
+	geofence_proximity_state_e state = GEOFENCE_PROXIMITY_UNCERTAIN;
+	wifi_error_e rv = WIFI_ERROR_NONE;
+	LOGI_GEOFENCE("running cnt: %d, connected id: %d", geofence_server->running_wifi_cnt, geofence_server->connectedTrackingWifiFenceId);
+	if (geofence_server->running_wifi_cnt > 0 && geofence_server->connectedTrackingWifiFenceId != -1) {
+		rv = wifi_get_connected_ap(&ap_h);
+		if (rv != WIFI_ERROR_NONE) {
+			LOGE_GEOFENCE("Fail to get the connected AP: Error - %d", rv);
+			return;
+		}
+		rv = wifi_ap_get_bssid(ap_h, &bssid);
+		if (rv != WIFI_ERROR_NONE) {
+			LOGI_GEOFENCE("Fail to get the bssid: [%d]", rv);
+		} else {
+			/*Emit the proximity alert here using mConnectedFenceId*/
+			if (rssi_level == WIFI_RSSI_LEVEL_4)
+				state = GEOFENCE_PROXIMITY_IMMEDIATE;
+			else if (rssi_level ==  WIFI_RSSI_LEVEL_3)
+				state = GEOFENCE_PROXIMITY_NEAR;
+			else
+				state = GEOFENCE_PROXIMITY_FAR;
+
+			emit_wifi_geofence_proximity_changed(geofence_server, geofence_server->connectedTrackingWifiFenceId, state);
+		}
+	}
+}
+
 void wifi_device_state_changed(wifi_device_state_e state, void *user_data)
 {
 	FUNC_ENTRANCE_SERVER
@@ -114,12 +175,14 @@ void __geofence_check_wifi_matched_bssid(wifi_connection_state_e state,	char *bs
 				LOGD_GEOFENCE("Error fetching the fence bssid info/ fence does not exist");
 				return;
 			}
-			if (!(g_ascii_strcasecmp(bssid_info->bssid, bssid))) {
+			if (!g_ascii_strcasecmp(bssid_info->bssid, bssid) || !g_ascii_strcasecmp(g_strdelimit(bssid_info->bssid, "-", ':'), bssid)) {
 				LOGI_GEOFENCE("Matched wifi fence: fence_id = %d, bssid = %s", tracking_fence_id, bssid_info->bssid);
 				if (state == WIFI_CONNECTION_STATE_CONNECTED) {
 					emit_wifi_geofence_inout_changed(geofence_server, tracking_fence_id, GEOFENCE_FENCE_STATE_IN);
+					geofence_server->connectedTrackingWifiFenceId = tracking_fence_id;
 				} else if (state == WIFI_CONNECTION_STATE_DISCONNECTED) {
 					emit_wifi_geofence_inout_changed(geofence_server, tracking_fence_id, GEOFENCE_FENCE_STATE_OUT);
+					geofence_server->connectedTrackingWifiFenceId = -1;
 				}
 				break;	/*Because there cannot be two APs connected at the same time*/
 			}

@@ -99,6 +99,17 @@ typedef void (*geofence_bt_adapter_device_discovery_state_changed_cb)(int result
  */
 typedef void (*geofence_gps_setting_changed_cb)(location_method_e method, bool enable, void *user_data);
 
+
+/**
+ * @brief Called when the RSSI of connected Wi-Fi is changed.
+ * @since_tizen 2.3
+ * @param[in] rssi_level  The level of RSSI
+ * @param[in] user_data The user data passed from the callback registration function
+ * @see wifi_set_rssi_level_changed_cb()
+ * @see wifi_unset_rssi_level_changed_cb()
+ */
+typedef void(*geofence_wifi_rssi_level_changed_cb)(wifi_rssi_level_e rssi_level, void *user_data);
+
 /**
  * Geofence callback structure.
  */
@@ -110,6 +121,7 @@ struct geofence_callbacks_s {
 	geofence_network_event_cb network_evt_cb;
 	geofence_bt_adapter_device_discovery_state_changed_cb bt_discovery_cb;
 	geofence_gps_setting_changed_cb gps_setting_changed_cb;
+	geofence_wifi_rssi_level_changed_cb wifi_rssi_level_changed_cb;
 };
 
 typedef struct geofence_callbacks_s geofence_callbacks;

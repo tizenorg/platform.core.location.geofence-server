@@ -188,6 +188,18 @@ static void __geofence_wifi_device_state_changed_cb(wifi_device_state_e state, v
 	}
 }
 
+static void __geofence_wifi_rssi_level_changed_cb(wifi_rssi_level_e rssi_level, void *user_data)
+{
+	LOGD_GEOFENCE("__geofence_wifi_rssi_level_changed_cb()");
+	GeofenceServer *geofence_server = (GeofenceServer *)user_data;
+	g_return_if_fail(geofence_server);
+
+	if (g_fence_update_cb.wifi_rssi_level_changed_cb) {
+		LOGD_GEOFENCE("wifi_rssi_level_changed_cb");
+		g_fence_update_cb.wifi_rssi_level_changed_cb(rssi_level, user_data);
+	}
+}
+
 static void __geofence_gps_setting_changed_cb(location_method_e method,	bool enable, void *user_data)
 {
 	LOGD_GEOFENCE("__geofence_gps_setting_changed_cb()");
@@ -280,8 +292,25 @@ int _geofence_initialize_geofence_server(GeofenceServer *geofence_server)
 	} else {
 		LOGD_GEOFENCE("wifi_set_device_state_changed_cb() success.", ret);
 	}
+
+	ret = wifi_set_rssi_level_changed_cb(__geofence_wifi_rssi_level_changed_cb, geofence_server);
+	if (WIFI_ERROR_NONE != ret) {
+		LOGD_GEOFENCE("wifi_set_rssi_level_changed_cb() failed(%d).", ret);
+		ret = wifi_deinitialize();
+		if (ret != WIFI_ERROR_NONE)
+			LOGD_GEOFENCE("wifi_deinitialize() failed(%d).", ret);
+		return -1;
+	} else {
+		LOGD_GEOFENCE("wifi_set_rssi_level_changed_cb() success.", ret);
+	}
+
 	/*Set the callback for location*/
 	ret = location_manager_set_setting_changed_cb(LOCATIONS_METHOD_GPS, __geofence_gps_setting_changed_cb, geofence_server);
+	if (LOCATIONS_ERROR_NONE != ret) {
+		LOGD_GEOFENCE("location_manager_set_setting_changed_cb() failed(%d)", ret);
+		return -1;
+	}
+	ret = location_manager_set_setting_changed_cb(LOCATIONS_METHOD_WPS, __geofence_gps_setting_changed_cb, geofence_server);
 	if (LOCATIONS_ERROR_NONE != ret) {
 		LOGD_GEOFENCE("location_manager_set_setting_changed_cb() failed(%d)", ret);
 		return -1;

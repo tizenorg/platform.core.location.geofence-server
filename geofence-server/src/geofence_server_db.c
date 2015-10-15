@@ -714,10 +714,6 @@ int geofence_manager_db_init(void)
 	struct stat stat;
 	int open_flag = 0;
 
-	/*
-	geofence_db_file = g_strdup_printf("%s/%s", GEOFENCE_DB_PATH, GEOFENCE_DB_FILE);
-	*/
-
 	if (__check_db_file()) {
 		LOGW_GEOFENCE("db(%s) file doesn't exist.", GEOFENCE_DB_FILE);
 		open_flag = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE| SQLITE_OPEN_FULLMUTEX;

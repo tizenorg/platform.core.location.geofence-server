@@ -37,6 +37,35 @@ static gboolean __geofence_check_fence_status(int fence_status, GeofenceItemData
 	return ret;
 }
 
+static void emit_bt_geofence_proximity_changed(GeofenceServer *geofence_server, int fence_id, int fence_proximity_status)
+{
+	FUNC_ENTRANCE_SERVER
+	LOGD_GEOFENCE("emit_bt_geofence_proximity_changed");
+	char *app_id = NULL;
+	int ret = FENCE_ERR_NONE;
+
+	ret = geofence_manager_get_appid_from_geofence(fence_id, &app_id);
+	if (ret != FENCE_ERR_NONE) {
+		LOGE("Error getting the app_id for fence id[%d]", fence_id);
+		return;
+	}
+	GeofenceItemData *item_data = __get_item_by_fence_id(fence_id, geofence_server);
+	if (item_data == NULL) {
+		LOGD_GEOFENCE("getting item data failed. fence_id [%d]", fence_id);
+		g_free(app_id);
+		return;
+	}
+
+	if (fence_proximity_status != item_data->common_info.proximity_status) {
+		geofence_dbus_server_send_geofence_proximity_changed(geofence_server->geofence_dbus_server, app_id, fence_id, item_data->common_info.access_type, fence_proximity_status, GEOFENCE_PROXIMITY_PROVIDER_BLUETOOTH);
+		item_data->common_info.proximity_status = fence_proximity_status;
+	}
+
+	if (app_id)
+		free(app_id);
+}
+
+
 static void emit_bt_geofence_inout_changed(GeofenceServer *geofence_server, GeofenceItemData *item_data, int fence_status)
 {
 	FUNC_ENTRANCE_SERVER
@@ -102,16 +131,18 @@ static void __geofence_check_bt_fence_type(gboolean connected, const char *bssid
 		}
 		LOGD_GEOFENCE("bt_info->bssid [%s]", bt_info_from_db->bssid);
 
-		if (g_ascii_strcasecmp(bt_info_from_db->bssid, bssid) == 0) {
+		if (!g_ascii_strcasecmp(bt_info_from_db->bssid, bssid) || !g_ascii_strcasecmp(g_strdelimit(bt_info_from_db->bssid, "-", ':'), bssid)) {
 			if (connected) {	/* connected => FENCE_IN*/
 				if (__geofence_check_fence_status(GEOFENCE_FENCE_STATE_IN, item_data) == TRUE) {
 					LOGD_GEOFENCE("Emitted to fence_id [%d] GEOFENCE_FENCE_STATE_IN", fence_id);
 					emit_bt_geofence_inout_changed(geofence_server, item_data, GEOFENCE_FENCE_STATE_IN);
+					emit_bt_geofence_proximity_changed(geofence_server, fence_id, GEOFENCE_PROXIMITY_NEAR);
 				}
 			} else {	/* disconnected => FENCE_OUT*/
 				if (__geofence_check_fence_status(GEOFENCE_FENCE_STATE_OUT, item_data) == TRUE) {
 					LOGD_GEOFENCE("Emitted to fence_id [%d] GEOFENCE_FENCE_STATE_OUT", fence_id);
 					emit_bt_geofence_inout_changed(geofence_server, item_data, GEOFENCE_FENCE_STATE_OUT);
+					emit_bt_geofence_proximity_changed(geofence_server, fence_id, GEOFENCE_PROXIMITY_FAR);
 				}
 			}
 		}

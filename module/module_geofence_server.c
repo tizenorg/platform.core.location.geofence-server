@@ -41,6 +41,7 @@ typedef enum {
 typedef struct {
 	geofence_client_dbus_h geofence_client;
 	GeofenceModCB geofence_cb;
+	GeofenceModProximityCB geofence_proximity_cb;
 	GeofenceModEventCB geofence_event_cb;
 	gchar *app_id;
 	gpointer userdata;
@@ -163,6 +164,26 @@ static void geofence_callback(GVariant *param, void *user_data)
 	} else {
 		if (geofence_manager->geofence_cb)	/*Here filteration is done in the manager as public fences cannot be restricted/filtered.*/
 			geofence_manager->geofence_cb(fence_id, state, geofence_manager->userdata);
+	}
+}
+
+static void geofence_proximity_callback(GVariant *param, void *user_data)
+{
+	g_return_if_fail(user_data);
+	GeofenceManagerData *geofence_manager = (GeofenceManagerData *)user_data;
+	int fence_id, access_type, proximity_state, provider;
+	char *app_id = NULL;
+
+	g_variant_get(param, "(siiii)", &app_id, &fence_id, &access_type, &proximity_state, &provider);
+
+	if (access_type == ACCESS_TYPE_PRIVATE) {
+		if (!(g_strcmp0(geofence_manager->app_id, app_id))) {   /*Sending the alert only the app-id matches in case of private fence*/
+			if (geofence_manager->geofence_proximity_cb)
+				geofence_manager->geofence_proximity_cb(fence_id, proximity_state, provider, geofence_manager->userdata);
+		}
+	} else {
+		if (geofence_manager->geofence_proximity_cb)      /*Here filteration is done in the manager as public fences cannot be restricted/filtered.*/
+			geofence_manager->geofence_proximity_cb(fence_id, proximity_state, provider, geofence_manager->userdata);
 	}
 }
 
@@ -331,6 +352,9 @@ static void on_signal_callback(const gchar *sig, GVariant *param, gpointer user_
 	if (!g_strcmp0(sig, "GeofenceInout")) {
 		MOD_LOGD("GeofenceInoutChanged");
 		geofence_callback(param, user_data);
+	} else if (!g_strcmp0(sig, "GeofenceProximity")) {
+		MOD_LOGD("GeofenceProximityChanged");
+		geofence_proximity_callback(param, user_data);
 	} else if (!g_strcmp0(sig, "GeofenceEvent")) {
 		MOD_LOGD("GeofenceEventInvoked");
 		geofence_event_callback(param, user_data);
@@ -376,8 +400,7 @@ EXPORT_API int stop_geofence(void *handle, int fence_id)
 	return GEOFENCE_MANAGER_ERROR_NONE;
 }
 
-EXPORT_API int create(void *handle, GeofenceModCB geofence_cb,
-                               GeofenceModEventCB geofence_event_cb, void *userdata)
+EXPORT_API int create(void *handle, GeofenceModCB geofence_cb, GeofenceModProximityCB geofence_proximity_cb, GeofenceModEventCB geofence_event_cb, void *userdata)
 {
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *) handle;
 	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
@@ -387,6 +410,7 @@ EXPORT_API int create(void *handle, GeofenceModCB geofence_cb,
 	int ret = GEOFENCE_MANAGER_ERROR_NONE;
 
 	geofence_manager->geofence_cb = geofence_cb;
+	geofence_manager->geofence_proximity_cb = geofence_proximity_cb;
 	geofence_manager->geofence_event_cb = geofence_event_cb;
 	geofence_manager->userdata = userdata;
 
@@ -492,6 +516,7 @@ EXPORT_API gpointer init(GeofenceModOps *ops)
 	g_return_val_if_fail(geofence_manager, NULL);
 
 	geofence_manager->geofence_cb = NULL;
+	geofence_manager->geofence_proximity_cb = NULL;
 	geofence_manager->geofence_event_cb = NULL;
 	geofence_manager->userdata = NULL;
 
