@@ -40,6 +40,7 @@ extern "C" {
 #define APP_ID_LEN		64
 #define ADDRESS_LEN		64
 #define PLACE_NAME_LEN	64
+#define BLE_INFO_LEN	256
 
 /**
  * The geofence common information structure
@@ -163,6 +164,8 @@ typedef struct {
 	int loc_gps_started_by_wps;
 	int loc_gps_started;
 	int loc_wps_started;
+	char ble_info[BLE_INFO_LEN];
+	int nearestTrackingFence;
 	int connectedTrackingWifiFenceId;
 	alarm_id_t timer_id;	/* ID for timer source*/
 	alarm_id_t gps_alarm_id;	/* ID for WPS restart timer source*/
