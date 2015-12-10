@@ -209,7 +209,7 @@ static inline int __geofence_manager_db_create_geofence_table(void)
 	char *err = NULL;
 	char *ddl;
 
-	ddl = sqlite3_mprintf("CREATE TABLE GeoFence ( fence_id INTEGER PRIMARY KEY AUTOINCREMENT, place_id INTEGER, enable INTEGER, app_id TEXT NOT NULL, geofence_type INTEGER, access_type INTEGER, running_status INTEGER, FOREIGN KEY(place_id) REFERENCES Places(place_id) ON DELETE CASCADE)");
+	ddl = sqlite3_mprintf("CREATE TABLE GeoFence ( fence_id INTEGER PRIMARY KEY AUTOINCREMENT, place_id INTEGER, enable INTEGER, app_id TEXT NOT NULL, geofence_type INTEGER, access_type INTEGER, running_status INTEGER, ble_info TEXT, FOREIGN KEY(place_id) REFERENCES Places(place_id) ON DELETE CASCADE)");
 
 	if (sqlite3_exec(db_info_s.handle, ddl, NULL, NULL, &err) != SQLITE_OK) {
 		LOGI_GEOFENCE("Failed to execute the DDL (%s)", err);
@@ -716,7 +716,7 @@ int geofence_manager_db_init(void)
 
 	if (__check_db_file()) {
 		LOGW_GEOFENCE("db(%s) file doesn't exist.", GEOFENCE_DB_FILE);
-		open_flag = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE| SQLITE_OPEN_FULLMUTEX;
+		open_flag = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX;
 	} else {
 		if (lstat(GEOFENCE_DB_FILE, &stat) < 0) {
 			LOGE_GEOFENCE("Can't get db(%s) information.", GEOFENCE_DB_FILE);
@@ -1889,6 +1889,86 @@ int geofence_manager_set_appid_to_geofence(int fence_id, char *appid)
 	const char *tail;
 
 	char *query = sqlite3_mprintf("UPDATE GeoFence SET app_id = %Q where fence_id = %d;", appid, fence_id);
+
+	ret = sqlite3_prepare_v2(db_info_s.handle, query, -1, &state, &tail);
+	if (ret != SQLITE_OK) {
+		LOGI_GEOFENCE("Error: %s", sqlite3_errmsg(db_info_s.handle));
+		sqlite3_free(query);
+		return FENCE_ERR_PREPARE;
+	}
+
+	ret = sqlite3_step(state);
+	if (ret != SQLITE_DONE) {
+		LOGI_GEOFENCE("sqlite3_step Error[%d] : %s", ret, sqlite3_errmsg(db_info_s.handle));
+		sqlite3_finalize(state);
+		sqlite3_free(query);
+		return FENCE_ERR_SQLITE_FAIL;
+	}
+
+	sqlite3_finalize(state);
+	sqlite3_free(query);
+	return FENCE_ERR_NONE;
+}
+
+/**
+ * This function get ble info from DB.
+ *
+ * @param[in]	fence_id
+ * @param[in]	ble_info
+ * @return	FENCE_ERR_NONE on success, negative values for errors
+ */
+int geofence_manager_get_ble_info_from_geofence(int fence_id, char **ble_info)
+{
+	FUNC_ENTRANCE_SERVER;
+	sqlite3_stmt *state = NULL;
+	int ret = SQLITE_OK;
+	const char *tail = NULL;
+	char *info = NULL;
+
+	char *query = sqlite3_mprintf("SELECT ble_info FROM GeoFence where fence_id = %d;", fence_id);
+	LOGD_GEOFENCE("current fence id is [%d]", fence_id);
+	ret = sqlite3_prepare_v2(db_info_s.handle, query, -1, &state, &tail);
+	if (ret != SQLITE_OK) {
+		LOGI_GEOFENCE("Error: %s", sqlite3_errmsg(db_info_s.handle));
+		sqlite3_free(query);
+		return FENCE_ERR_PREPARE;
+	}
+
+	ret = sqlite3_step(state);
+	if (ret != SQLITE_ROW) {
+		LOGI_GEOFENCE("sqlite3_step Error[%d] : %s", ret, sqlite3_errmsg(db_info_s.handle));
+		sqlite3_finalize(state);
+		sqlite3_free(query);
+		return FENCE_ERR_SQLITE_FAIL;
+	}
+
+	info = (char *) sqlite3_column_text(state, 0);
+	if (!info || !strlen(info)) {
+		LOGI_GEOFENCE("ERROR: ble info is NULL!!!");
+	} else {
+		*ble_info = g_strdup(info);
+	}
+
+	sqlite3_finalize(state);
+	sqlite3_free(query);
+	return FENCE_ERR_NONE;
+}
+
+/**
+ * This function set ble info on DB.
+ *
+ * @param[in]	fence_id
+ * @param[in]	ble_info
+ * @return	FENCE_ERR_NONE on success, negative values for errors
+ */
+int geofence_manager_set_ble_info_to_geofence(int fence_id, char *ble_info)
+{
+	FUNC_ENTRANCE_SERVER;
+	sqlite3_stmt *state;
+	int ret = SQLITE_OK;
+	const char *tail;
+
+	char *query = sqlite3_mprintf("UPDATE GeoFence SET ble_info = %Q where fence_id = %d;", ble_info, fence_id);
 
 	ret = sqlite3_prepare_v2(db_info_s.handle, query, -1, &state, &tail);
 	if (ret != SQLITE_OK) {

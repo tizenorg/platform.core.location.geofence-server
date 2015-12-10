@@ -156,7 +156,7 @@ static void __geofence_bt_adapter_device_discovery_state_changed_cb(int result,	
 	g_return_if_fail(geofence_server);
 
 	if (g_fence_update_cb.bt_discovery_cb) {
-		LOGD_GEOFENCE("bt_conn_state_changed_cb");
+		LOGD_GEOFENCE("bt_adapter_device_discovery_state_changed_cb");
 		g_fence_update_cb.bt_discovery_cb(result, discovery_state, discovery_info, user_data);
 	}
 	LOGD_GEOFENCE("exit");
@@ -209,6 +209,17 @@ static void __geofence_gps_setting_changed_cb(location_method_e method,	bool ena
 	if (g_fence_update_cb.gps_setting_changed_cb) {
 		LOGD_GEOFENCE("GPS setting changed");
 		g_fence_update_cb.gps_setting_changed_cb(method, enable, user_data);
+	}
+}
+
+static void __geofence_device_display_changed_cb(device_callback_e type, void *value, void *user_data)
+{
+	LOGD_GEOFENCE("__geofence_device_display_changed_cb");
+	GeofenceServer *geofence_server = (GeofenceServer *)user_data;
+	g_return_if_fail(geofence_server);
+	if (g_fence_update_cb.device_display_changed_cb) {
+		LOGD_GEOFENCE("Device display changed");
+		g_fence_update_cb.device_display_changed_cb(type, value, user_data);
 	}
 }
 
@@ -315,7 +326,11 @@ int _geofence_initialize_geofence_server(GeofenceServer *geofence_server)
 		LOGD_GEOFENCE("location_manager_set_setting_changed_cb() failed(%d)", ret);
 		return -1;
 	}
-
+	ret = device_add_callback(DEVICE_CALLBACK_DISPLAY_STATE, __geofence_device_display_changed_cb, geofence_server);
+	if (DEVICE_ERROR_NONE == ret) {
+		LOGD_GEOFENCE("device_add_callback() failed(%d)", ret);
+		return -1;
+	}
 	return 0;
 }
 
