@@ -58,6 +58,43 @@ static void emit_wifi_geofence_inout_changed(GeofenceServer *geofence_server, in
 		free(app_id);
 }
 
+static bool __check_for_match(char *str1, char *str2)
+{
+	if (g_strrstr(str1, str2) == NULL)
+		return false;
+	return true;
+}
+
+static void bt_le_scan_result_cb(int result, bt_adapter_le_device_scan_result_info_s *info, void *user_data)
+{
+	int ret = BT_ERROR_NONE;
+	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
+	LOGI_GEOFENCE("Current addresses: %s", geofence_server->ble_info);
+	LOGI_GEOFENCE("Received address: %s", info->remote_address);
+
+	if (info == NULL) {
+		LOGI_GEOFENCE("Stopping scan as there is no BLE address found");
+		ret = bt_adapter_le_stop_scan();
+		if (ret != BT_ERROR_NONE)
+			LOGE_GEOFENCE("Unable to stop the BLE scan, error: %d", ret);
+		return;
+	}
+	if (!g_ascii_strcasecmp(geofence_server->ble_info, "")) {
+		g_stpcpy(geofence_server->ble_info, info->remote_address);
+	} else if (!__check_for_match(geofence_server->ble_info, info->remote_address)) { /* If duplicate does not exist */
+		char *p = g_strjoin(";", geofence_server->ble_info, info->remote_address, NULL);
+		g_stpcpy(geofence_server->ble_info, p);
+		g_free(p);
+	} else {
+		LOGI_GEOFENCE("Stopping scan. Address: %s already exist in the string %s", info->remote_address, geofence_server->ble_info);
+		ret = bt_adapter_le_stop_scan();
+		if (ret != BT_ERROR_NONE)
+			LOGE_GEOFENCE("Unable to stop the BLE scan, error: %d", ret);
+		/* Add the string to the database. */
+		geofence_manager_set_ble_info_to_geofence(geofence_server->connectedTrackingWifiFenceId, geofence_server->ble_info);
+	}
+}
+
 static void emit_wifi_geofence_proximity_changed(GeofenceServer *geofence_server, int fence_id, int fence_proximity_status)
 {
 	FUNC_ENTRANCE_SERVER
@@ -79,9 +116,22 @@ static void emit_wifi_geofence_proximity_changed(GeofenceServer *geofence_server
 
 	if (fence_proximity_status != item_data->common_info.proximity_status) {
 		geofence_dbus_server_send_geofence_proximity_changed(geofence_server->geofence_dbus_server, app_id, fence_id, item_data->common_info.access_type, fence_proximity_status, GEOFENCE_PROXIMITY_PROVIDER_WIFI);
+		if (geofence_server->connectedTrackingWifiFenceId == fence_id) {
+			if (fence_proximity_status == GEOFENCE_PROXIMITY_IMMEDIATE) {
+				LOGD_GEOFENCE("WIFI Fence. Scanning for BLE and storing in DB");
+				g_stpcpy(geofence_server->ble_info, "");
+				ret = bt_adapter_le_start_scan(bt_le_scan_result_cb, geofence_server);
+				if (ret != BT_ERROR_NONE) {
+					LOGE_GEOFENCE("Fail to start ble scan. %d", ret);
+				}
+			} else if (item_data->common_info.proximity_status == GEOFENCE_PROXIMITY_IMMEDIATE) { /* Stopping the scan if state changes from imm to somethingelse */
+				ret = bt_adapter_le_stop_scan();
+				if (ret != BT_ERROR_NONE)
+					LOGE_GEOFENCE("Unable to stop the BLE scan/ Stopped already, error: %d", ret);
+			}
+		}
 		item_data->common_info.proximity_status = fence_proximity_status;
 	}
-
 	if (app_id)
 		free(app_id);
 }
@@ -113,7 +163,6 @@ void wifi_rssi_level_changed(wifi_rssi_level_e rssi_level, void *user_data)
 				state = GEOFENCE_PROXIMITY_NEAR;
 			else
 				state = GEOFENCE_PROXIMITY_FAR;
-
 			emit_wifi_geofence_proximity_changed(geofence_server, geofence_server->connectedTrackingWifiFenceId, state);
 		}
 	}
@@ -147,6 +196,7 @@ void wifi_device_state_changed(wifi_device_state_e state, void *user_data)
 		if (state == WIFI_DEVICE_STATE_DEACTIVATED) {
 			LOGD_GEOFENCE("Emitted to fence_id [%d] GEOFENCE_FENCE_STATE_OUT", fence_id);
 			emit_wifi_geofence_inout_changed(geofence_server, fence_id, GEOFENCE_FENCE_STATE_OUT);
+			emit_wifi_geofence_proximity_changed(geofence_server, fence_id, GEOFENCE_PROXIMITY_UNCERTAIN);
 		}
 	}
 
@@ -182,6 +232,7 @@ void __geofence_check_wifi_matched_bssid(wifi_connection_state_e state,	char *bs
 					geofence_server->connectedTrackingWifiFenceId = tracking_fence_id;
 				} else if (state == WIFI_CONNECTION_STATE_DISCONNECTED) {
 					emit_wifi_geofence_inout_changed(geofence_server, tracking_fence_id, GEOFENCE_FENCE_STATE_OUT);
+					emit_wifi_geofence_proximity_changed(geofence_server, tracking_fence_id, GEOFENCE_PROXIMITY_UNCERTAIN);
 					geofence_server->connectedTrackingWifiFenceId = -1;
 				}
 				break;	/*Because there cannot be two APs connected at the same time*/
