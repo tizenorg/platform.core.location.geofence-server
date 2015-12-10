@@ -26,6 +26,8 @@
 #include <bluetooth.h>
 #include <wifi.h>
 #include <locations.h>
+#include <device/display.h>
+#include <device/callback.h>
 #include <network-wifi-intf.h>
 #include "geofence_server_data_types.h"
 
@@ -49,6 +51,17 @@ typedef void (*geofence_bt_conn_state_changed_cb)(gboolean connected, bt_device_
  * @see None.
  */
 typedef void (*geofence_bt_adapter_disable_cb)(gboolean connected, void *user_data);
+
+
+/**
+ * @brief	Device changed callback
+ * @remarks	This callback will be called whenever there is a change in the device display
+ * @Param[in]	type	Type of the callback. Here used for diplay
+ * @Param[out]	value	state of the display
+ * @Param[in]	user_data	The user data to be returned
+ * @see None.
+ */
+typedef void (*geofence_device_display_changed_cb)(device_callback_e type, void *value, void *user_data);
 
 /**
  * @brief	Wifi connection status change callback
@@ -116,6 +129,7 @@ typedef void(*geofence_wifi_rssi_level_changed_cb)(wifi_rssi_level_e rssi_level,
 struct geofence_callbacks_s {
 	geofence_bt_conn_state_changed_cb bt_conn_state_changed_cb;
 	geofence_bt_adapter_disable_cb bt_apater_disable_cb;
+	geofence_device_display_changed_cb device_display_changed_cb;
 	geofence_wifi_conn_state_changed_cb wifi_conn_state_changed_cb;
 	geofence_wifi_device_state_changed_cb wifi_device_state_changed_cb;
 	geofence_network_event_cb network_evt_cb;

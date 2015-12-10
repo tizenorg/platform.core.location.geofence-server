@@ -32,10 +32,10 @@ BuildRequires:  pkgconfig(capi-location-manager)
 BuildRequires:  pkgconfig(capi-network-wifi)
 BuildRequires:  pkgconfig(capi-network-bluetooth)
 BuildRequires:  pkgconfig(libcore-context-manager)
+BuildRequires:  pkgconfig(capi-system-device)
 BuildRequires:  pkgconfig(capi-geofence-manager)
 BuildRequires:  pkgconfig(libtzplatform-config)
 BuildRequires:  capi-geofence-manager-plugin-devel
-Requires:  sys-assert
 
 %description
 Geofence Server for Tizen
