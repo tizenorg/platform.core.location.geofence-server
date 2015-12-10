@@ -47,6 +47,8 @@ int geofence_manager_get_appid_from_places(int place_id, char **appid);
 int geofence_manager_set_appid_to_places(int place_id, char *appid);
 int geofence_manager_get_appid_from_geofence(int fence_id, char **appid);
 int geofence_manager_set_appid_to_geofence(int fence_id, char *appid);
+int geofence_manager_get_ble_info_from_geofence(int fence_id, char **ble_info);
+int geofence_manager_set_ble_info_to_geofence(int fence_id, char *ble_info);
 int geofence_manager_get_geofence_type(int fence_id, geofence_type_e *fence_type);
 int geofence_manager_get_place_id(int fence_id, int *place_id);
 int geofence_manager_set_geofence_type(int fence_id, geofence_type_e fence_type);

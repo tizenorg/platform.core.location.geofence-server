@@ -159,6 +159,12 @@ typedef enum {
     ACCESS_TYPE_UNKNOWN,
 } access_type_e;
 
+typedef enum {
+    BLE_INFO_NONE = 0,
+    BLE_INFO_READ,
+    BLE_INFO_WRITE,
+} ble_mode_e;
+
 #ifdef __cplusplus
 }
 #endif
