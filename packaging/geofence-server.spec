@@ -35,7 +35,6 @@ BuildRequires:  pkgconfig(libcore-context-manager)
 BuildRequires:  pkgconfig(capi-geofence-manager)
 BuildRequires:  pkgconfig(libtzplatform-config)
 BuildRequires:  capi-geofence-manager-plugin-devel
-Requires:  sys-assert
 
 %description
 Geofence Server for Tizen
