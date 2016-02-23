@@ -1015,7 +1015,6 @@ static void geofence_network_evt_cb(net_event_info_t *event_cb, void *user_data)
 	FUNC_ENTRANCE_SERVER;
 	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
 	g_return_if_fail(geofence_server);
-	net_wifi_state_t network_state = WIFI_UNKNOWN;
 	int ret = -1;
 	int wps_state = 0;
 	int gps_state = 0;
@@ -1026,36 +1025,33 @@ static void geofence_network_evt_cb(net_event_info_t *event_cb, void *user_data)
 		vconf_get_int(VCONFKEY_LOCATION_NETWORK_ENABLED, &wps_state);
 		vconf_get_int(VCONFKEY_LOCATION_ENABLED, &gps_state);
 		if (__is_support_wps() == true && geofence_server->running_geopoint_cnt > 0) {
-			ret = net_get_wifi_state(&network_state, (net_profile_name_t*)event_cb->ProfileName);
-			if (ret == 0) {
-				if (network_state == WIFI_OFF) {
-					LOGI_GEOFENCE("WIFI is OFF");
-					/* In Tizen device(Kiran) WPS is not supported if WIFI is switched off */
-					__stop_wps_positioning(geofence_server);
-					__stop_wps_alarms(geofence_server);
-					if (geofence_server->loc_gps_started_by_wps == true) {
-						__stop_gps_positioning(geofence_server); /*Stop the gps if it was started by wps*/
+			if (__isWifiOn() == false) {
+				LOGI_GEOFENCE("WIFI is OFF");
+				/* In Tizen device(Kiran) WPS is not supported if WIFI is switched off */
+				__stop_wps_positioning(geofence_server);
+				__stop_wps_alarms(geofence_server);
+				if (geofence_server->loc_gps_started_by_wps == true) {
+					__stop_gps_positioning(geofence_server); /*Stop the gps if it was started by wps*/
+					__stop_gps_alarms(geofence_server);
+					geofence_server->loc_gps_started_by_wps = false;
+				}
+				if (gps_state == 1) {
+					ret = __start_gps_positioning(geofence_server, __geofence_standalone_gps_position_changed_cb);
+					if (ret != FENCE_ERR_NONE) {
+						LOGE_GEOFENCE("Fail to start standalone gps positioning. Error[%d]", ret);
+					}
+				}
+			} else {
+				if (__isDataConnected() == true) {/*&& wps_state == 1) {*/
+					LOGI_GEOFENCE("DATA CONNECTION IS TRUE");
+					if (wps_state == 1) {
+						LOGI_GEOFENCE("WPS STATE IS 1");
+						__stop_gps_positioning(geofence_server); /* Stop the gps which is running as wps can be used*/
 						__stop_gps_alarms(geofence_server);
-						geofence_server->loc_gps_started_by_wps = false;
-					}
-					if (gps_state == 1) {
-						ret = __start_gps_positioning(geofence_server, __geofence_standalone_gps_position_changed_cb);
+						/**** Start the WPS as mobile data is connected and wifi and wps are on *******/
+						ret = __start_wps_positioning(geofence_server, __geofence_wps_position_changed_cb);
 						if (ret != FENCE_ERR_NONE) {
-							LOGE_GEOFENCE("Fail to start standalone gps positioning. Error[%d]", ret);
-						}
-					}
-				} else {
-					if (__isDataConnected() == true) {/*&& wps_state == 1) {*/
-						LOGI_GEOFENCE("DATA CONNECTION IS TRUE");
-						if (wps_state == 1) {
-							LOGI_GEOFENCE("WPS STATE IS 1");
-							__stop_gps_positioning(geofence_server); /* Stop the gps which is running as wps can be used*/
-							__stop_gps_alarms(geofence_server);
-							/**** Start the WPS as mobile data is connected and wifi and wps are on *******/
-							ret = __start_wps_positioning(geofence_server, __geofence_wps_position_changed_cb);
-							if (ret != FENCE_ERR_NONE) {
-								LOGE_GEOFENCE("Fail to start wps positioning. Error[%d]", ret);
-							}
+							LOGE_GEOFENCE("Fail to start wps positioning. Error[%d]", ret);
 						}
 					}
 				}

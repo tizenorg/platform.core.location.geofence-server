@@ -1,6 +1,6 @@
 Name:       geofence-server
 Summary:    Geofence Server for Tizen
-Version:    0.4.2
+Version:    0.4.3
 Release:    1
 Group:      Location/Service
 License:    Apache-2.0
