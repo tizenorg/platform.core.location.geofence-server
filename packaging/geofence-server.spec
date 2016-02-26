@@ -60,9 +60,10 @@ make %{?jobs:-j%jobs}
 rm -rf %{buildroot}
 %make_install
 
-mkdir -p %{buildroot}%{_unitdir_user}/default.target.wants
-install -m 644 %{SOURCE1} %{buildroot}%{_unitdir_user}/geofence-server.service
-ln -s ../geofence-server.service %{buildroot}%{_unitdir_user}/default.target.wants/geofence-server.service
+#service for systemd is not installed to support only DBus auto activation
+#mkdir -p %{buildroot}%{_unitdir_user}/default.target.wants
+#install -m 644 %{SOURCE1} %{buildroot}%{_unitdir_user}/geofence-server.service
+#ln -s ../geofence-server.service %{buildroot}%{_unitdir_user}/default.target.wants/geofence-server.service
 
 %clean
 rm -rf %{buildroot}
@@ -79,8 +80,9 @@ rm -rf %{buildroot}
 /usr/share/dbus-1/services/org.tizen.lbs.Providers.GeofenceServer.service
 %config %{_sysconfdir}/dbus-1/session.d/geofence-server.conf
 
-%{_unitdir_user}/geofence-server.service
-%{_unitdir_user}/default.target.wants/geofence-server.service
+#service for systemd is not installed to support only DBus auto activation
+#%{_unitdir_user}/geofence-server.service
+#%{_unitdir_user}/default.target.wants/geofence-server.service
 
 
 %package -n location-geofence-server
