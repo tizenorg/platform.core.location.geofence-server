@@ -53,11 +53,14 @@ EXPORT_API int add_geopoint(void *handle, int place_id, double latitude, double 
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *)handle;
 	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
 	int new_fence_id = -1;
+	int error_code = GEOFENCE_MANAGER_ERROR_NONE;
 
-	new_fence_id = geo_client_add_geofence(geofence_manager->geofence_client, geofence_manager->app_id, place_id, GEOFENCE_TYPE_GEOPOINT, latitude, longitude, radius, address, "", "");
+	new_fence_id = geo_client_add_geofence(geofence_manager->geofence_client, geofence_manager->app_id, place_id, GEOFENCE_TYPE_GEOPOINT, latitude, longitude, radius, address, "", "", &error_code);
 	*fence_id = new_fence_id;
 
-	if (new_fence_id == -1)
+	if (error_code != GEOFENCE_MANAGER_ERROR_NONE)
+		return error_code;
+	else if (new_fence_id == -1)
 		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
@@ -69,11 +72,14 @@ EXPORT_API int add_bssid(void *handle, int place_id, const char *bssid, const ch
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *)handle;
 	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
 	int new_fence_id = -1;
+	int error_code = GEOFENCE_MANAGER_ERROR_NONE;
 
-	new_fence_id = geo_client_add_geofence(geofence_manager->geofence_client, geofence_manager->app_id, place_id, type, -1, -1, -1, "", bssid, ssid);
+	new_fence_id = geo_client_add_geofence(geofence_manager->geofence_client, geofence_manager->app_id, place_id, type, -1, -1, -1, "", bssid, ssid, &error_code);
 	*fence_id = new_fence_id;
 
-	if (new_fence_id == -1)
+	if (error_code != GEOFENCE_MANAGER_ERROR_NONE)
+		return error_code;
+	else if (new_fence_id == -1)
 		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
@@ -85,11 +91,14 @@ EXPORT_API int add_place(void *handle, const char *place_name, int *place_id)
 	GeofenceManagerData *geofence_manager = (GeofenceManagerData *)handle;
 	g_return_val_if_fail(geofence_manager, GEOFENCE_MANAGER_ERROR_INVALID_PARAMETER);
 	int new_place_id = -1;
+	int error_code = GEOFENCE_MANAGER_ERROR_NONE;
 
-	new_place_id = geo_client_add_place(geofence_manager->geofence_client, geofence_manager->app_id, place_name);
+	new_place_id = geo_client_add_place(geofence_manager->geofence_client, geofence_manager->app_id, place_name, &error_code);
 	*place_id = new_place_id;
 
-	if (new_place_id == -1)
+	if (error_code != GEOFENCE_MANAGER_ERROR_NONE)
+		return error_code;
+	else if (new_place_id == -1)
 		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
@@ -103,7 +112,7 @@ EXPORT_API int update_place(void *handle, int place_id, const char *place_name)
 
 	int ret = geo_client_update_place(geofence_manager->geofence_client, geofence_manager->app_id, place_id, place_name);
 	if (ret != GEOFENCE_CLIENT_ERROR_NONE)
-		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
+		return ret;
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
 }
@@ -116,7 +125,7 @@ EXPORT_API int remove_geofence(void *handle, int fence_id)
 
 	int ret = geo_client_delete_geofence(geofence_manager->geofence_client, geofence_manager->app_id, fence_id);
 	if (ret != GEOFENCE_CLIENT_ERROR_NONE)
-		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
+		return ret;
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
 }
@@ -129,7 +138,7 @@ EXPORT_API int remove_place(void *handle, int place_id)
 
 	int ret = geo_client_delete_place(geofence_manager->geofence_client, geofence_manager->app_id, place_id);
 	if (ret != GEOFENCE_CLIENT_ERROR_NONE)
-		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
+		return ret;
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
 }
@@ -222,7 +231,7 @@ EXPORT_API int get_place_name(void *handle, int place_id, char **place_name)
 	int error_code = GEOFENCE_MANAGER_ERROR_NONE;
 	int ret = geo_client_get_place_name(geofence_manager->geofence_client, geofence_manager->app_id, place_id, place_name, &error_code);
 	if (ret != GEOFENCE_CLIENT_ERROR_NONE)
-		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
+		return ret;
 	return error_code;
 }
 
@@ -247,10 +256,10 @@ EXPORT_API int get_geofences(void *handle, int place_id, int *fence_amount, int 
 	int error_code = GEOFENCE_MANAGER_ERROR_NONE;
 
 	int ret = geo_client_get_geofences(geofence_manager->geofence_client, geofence_manager->app_id, place_id, &iter, &fence_cnt, &error_code);
-	if (error_code != GEOFENCE_MANAGER_ERROR_NONE)
+	if (ret != GEOFENCE_MANAGER_ERROR_NONE)
+		return ret;
+	else if (error_code != GEOFENCE_MANAGER_ERROR_NONE)
 		return error_code;
-	else if (ret != GEOFENCE_MANAGER_ERROR_NONE)
-		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
 
 	*fence_amount = fence_cnt;
 	MOD_LOGD("Total fence count : %d", *fence_amount);
@@ -310,10 +319,12 @@ EXPORT_API int get_places(void *handle, int *place_amount, int **place_ids, plac
 	gchar *key;
 	GVariant *value;
 	int place_cnt = 0;
-	int error_code = -1;
+	int error_code = GEOFENCE_MANAGER_ERROR_NONE;
 
 	/*Call the geofence_client api here....*/
-	geo_client_get_places(geofence_manager->geofence_client, geofence_manager->app_id, &iter, &place_cnt, &error_code);
+	int ret = geo_client_get_places(geofence_manager->geofence_client, geofence_manager->app_id, &iter, &place_cnt, &error_code);
+	if (ret != GEOFENCE_MANAGER_ERROR_NONE)
+		return ret;
 	if (error_code != GEOFENCE_MANAGER_ERROR_NONE)
 		return error_code;
 
@@ -374,7 +385,7 @@ EXPORT_API int start_geofence(void *handle, int fence_id)
 	ret = geo_client_start_geofence(geofence_manager->geofence_client, geofence_manager->app_id, fence_id);
 	if (ret != GEOFENCE_MANAGER_ERROR_NONE) {
 		MOD_LOGE("Fail to start geofence_client_h. Error[%d]", ret);
-		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
+		return ret;
 	}
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
@@ -392,7 +403,7 @@ EXPORT_API int stop_geofence(void *handle, int fence_id)
 	ret = geo_client_stop_geofence(geofence_manager->geofence_client, geofence_manager->app_id, fence_id);
 	if (ret != GEOFENCE_MANAGER_ERROR_NONE) {
 		MOD_LOGE("Fail to stop. Error[%d]", ret);
-		return GEOFENCE_CLIENT_ERROR_DBUS_CALL;
+		return ret;
 	}
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
