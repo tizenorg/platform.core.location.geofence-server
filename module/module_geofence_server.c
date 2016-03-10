@@ -422,9 +422,6 @@ EXPORT_API int create(void *handle, GeofenceModCB geofence_cb, GeofenceModProxim
 
 	MOD_LOGD("geofence_manager->geofence_client: %p", geofence_manager->geofence_client);
 	ret = geo_client_start(geofence_manager->geofence_client, on_signal_callback, geofence_manager);
-#if 0
-	ret = geo_client_start(geofence_manager->geofence_client, on_signal_callback, geofence_manager);
-#endif
 
 	if (ret != GEOFENCE_CLIENT_ERROR_NONE) {
 		if (ret == GEOFENCE_CLIENT_ACCESS_DENIED) {
