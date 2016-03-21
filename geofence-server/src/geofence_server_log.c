@@ -26,42 +26,33 @@
 
 int fd = -1;
 
-struct tm *__get_current_time()
+void __get_current_time(struct tm *cur_time)
 {
 	time_t now;
-	struct tm *cur_time;
 	time(&now);
-	cur_time = localtime(&now);
-	return cur_time;
+	localtime_r(&now, cur_time);
 }
 
 void _init_log()
 {
-	struct tm *cur_time = __get_current_time();
+	struct tm cur_time;
 	char buf[256] = { 0, };
-	/*fd = open(__GEOFENCE_LOG_FILE__,  O_RDWR | O_APPEND | O_CREAT, 0644);
-	 * if (fd < 0) {
-	 * LOGI_GEOFENCE("Fail to open file[%s]", __GEOFENCE_LOG_FILE__);
-	 * return;
-	 * } */
 
-	if (cur_time != NULL)
-		sprintf(buf, "[%02d:%02d:%02d] -- START -- \n", cur_time->tm_hour, cur_time->tm_min, cur_time->tm_sec);
+    __get_current_time(&cur_time);
+	snprintf(buf, 256, "[%02d:%02d:%02d] -- START -- \n", cur_time.tm_hour, cur_time.tm_min, cur_time.tm_sec);
 	LOGI_GEOFENCE("BUF[%s]", buf);
-	/*      write(fd, buf, strlen(buf));*/
 }
 
 void _deinit_log()
 {
 	if (fd < 0)
 		return;
-	struct tm *cur_time = __get_current_time();
+	struct tm cur_time;
 	char buf[256] = { 0, };
 
-	if (cur_time != NULL)
-		sprintf(buf, "[%02d:%02d:%02d] -- END -- \n", cur_time->tm_hour, cur_time->tm_min, cur_time->tm_sec);
+    __get_current_time(&cur_time);
+	snprintf(buf, 256, "[%02d:%02d:%02d] -- END -- \n", cur_time.tm_hour, cur_time.tm_min, cur_time.tm_sec);
 	LOGI_GEOFENCE("BUF[%s]", buf);
-	/*      write(fd, buf, strlen(buf));*/
 
 	close(fd);
 	fd = -1;
@@ -72,12 +63,10 @@ void _print_log(const char *str)
 	if (fd < 0)
 		return;
 	char buf[256] = { 0, };
-	struct tm *cur_time = __get_current_time();
+	struct tm cur_time;
+    __get_current_time(&cur_time);
 
-	if (cur_time != NULL)
-		sprintf(buf, "[%02d:%02d:%02d] %s\n", cur_time->tm_hour, cur_time->tm_min, cur_time->tm_sec, str);
-
+	snprintf(buf, 256, "[%02d:%02d:%02d] %s\n", cur_time.tm_hour, cur_time.tm_min, cur_time.tm_sec, str);
 	LOGI_GEOFENCE("BUF %s", buf);
-	/*      write(fd, buf, strlen(buf));*/
 }
 

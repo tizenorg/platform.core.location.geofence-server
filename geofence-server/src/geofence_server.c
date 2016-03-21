@@ -123,7 +123,7 @@ static const char *__convert_wifi_error_to_string(wifi_error_e err_type)
 void emit_proximity_using_ble(GeofenceServer *geofence_server, int fence_id, geofence_proximity_state_e state)
 {
 	FUNC_ENTRANCE_SERVER;
-	g_return_val_if_fail(geofence_server, -1);
+	g_return_if_fail(geofence_server);
 	GeofenceItemData *item_data = __get_item_by_fence_id(fence_id, geofence_server);
 	if (item_data) {
 		if (item_data->common_info.proximity_status != state) {

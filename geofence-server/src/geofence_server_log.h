@@ -21,16 +21,16 @@
 void _init_log();
 void _deinit_log();
 void _print_log(const char *str);
-struct tm *__get_current_time();
+void __get_current_time(struct tm *cur_time);
 
 #define GEOFENCE_PRINT_LOG(state)	{ \
 		char buf[256] = {0, }; \
-		sprintf(buf, " [%s:%d] Status[%s]", __func__, __LINE__, #state); \
+		snprintf(buf, 256, " [%s:%d] Status[%s]", __func__, __LINE__, #state); \
 		_print_log(buf); \
 	}
 #define GEOFENCE_PRINT_LOG_WITH_ID(state, id)	{ \
 		char buf[256] = {0, }; \
-		sprintf(buf, " [%s:%d] Status[%s]. ID[%d]", __func__, __LINE__, #state, id); \
+		snprintf(buf, 256, " [%s:%d] Status[%s]. ID[%d]", __func__, __LINE__, #state, id); \
 		_print_log(buf); \
 	}
 
