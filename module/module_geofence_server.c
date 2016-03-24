@@ -257,9 +257,6 @@ EXPORT_API int get_geofences(void *handle, int place_id, int *fence_amount, int 
 	int *fence_id_array = (int *) g_slice_alloc0(sizeof(int) * fence_cnt);
 	geofence_s *p = (geofence_s *) g_slice_alloc0(sizeof(geofence_s) * fence_cnt);
 
-	if (iter == NULL) {
-		MOD_LOGI("Iterator is null");
-	}
 	while (g_variant_iter_next(iter, "a{sv}", &iter_row)) {
 		while (g_variant_iter_loop(iter_row, "{sv}", &key, &value)) {
 			if (!g_strcmp0(key, "fence_id")) {
@@ -287,7 +284,8 @@ EXPORT_API int get_geofences(void *handle, int place_id, int *fence_amount, int 
 		index++;
 		g_variant_iter_free(iter_row);
 	}
-	g_variant_iter_free(iter);
+	if (iter != NULL)
+		g_variant_iter_free(iter);
 	*params = (geofence_s *) p;
 	*fence_ids = fence_id_array;
 
