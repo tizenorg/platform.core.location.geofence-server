@@ -148,7 +148,7 @@ static void bt_le_scan_result_cb(int result, bt_adapter_le_device_scan_result_in
 	int ret = BT_ERROR_NONE;
 	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
 	LOGI_GEOFENCE("Current addresses: %s", geofence_server->ble_info);
-	LOGI_GEOFENCE("Received address: %s", info->remote_address);
+
 	if (info == NULL) {
 		LOGI_GEOFENCE("Stopping scan as there is no BLE addresses found");
 		ret = bt_adapter_le_stop_scan();
@@ -156,6 +156,8 @@ static void bt_le_scan_result_cb(int result, bt_adapter_le_device_scan_result_in
 			LOGE_GEOFENCE("Unable to stop the BLE scan, error: %d", ret);
 		return;
 	}
+	LOGI_GEOFENCE("Received address: %s", info->remote_address);
+
 	/* Retrieve the information about the AP */
 	if (!g_ascii_strcasecmp(geofence_server->ble_info, "")) {
 		g_stpcpy(geofence_server->ble_info, info->remote_address);
@@ -210,6 +212,10 @@ void bt_le_scan_result_display_cb(int result, bt_adapter_le_device_scan_result_i
 			ble_proximity_mode = BLE_INFO_NONE;
 			fence_id = GPOINTER_TO_INT(tracking_list->data);
 			GeofenceItemData *item_data = __get_item_by_fence_id(fence_id, geofence_server);
+			if (item_data == NULL) {
+				LOGD_GEOFENCE("Invalid item_data");
+				return;
+			}
 			if (item_data->common_info.type == GEOFENCE_TYPE_GEOPOINT) {
 				vconf_get_int(VCONFKEY_LOCATION_NETWORK_ENABLED, &wps_state);
 				vconf_get_int(VCONFKEY_LOCATION_ENABLED, &gps_state);
@@ -1584,6 +1590,7 @@ static int dbus_add_fence_cb(const gchar *app_id,
 		if (geocoordinate_info == NULL) {
 			LOGI_GEOFENCE("Fail to set geocoordinate_info for GPS because of malloc fail");
 			__emit_fence_event(geofence_server, place_id, -1, ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_OUT_OF_MEMORY, GEOFENCE_MANAGE_FENCE_ADDED);
+			g_free(item_data);
 			return -1;
 		}
 		geocoordinate_info->latitude = latitude;
@@ -1603,6 +1610,8 @@ static int dbus_add_fence_cb(const gchar *app_id,
 			if (ret != FENCE_ERR_NONE)
 				LOGI_GEOFENCE("Fail to delete fence_id[%d] from common table", fence_id);
 			__emit_fence_event(geofence_server, place_id, -1, ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_DATABASE, GEOFENCE_MANAGE_FENCE_ADDED);
+			g_free(geocoordinate_info);
+			g_free(item_data);
 			return -1;
 		}
 		item_data->priv = (void *) geocoordinate_info;
@@ -1615,6 +1624,7 @@ static int dbus_add_fence_cb(const gchar *app_id,
 		if (wifi_info == NULL) {
 			LOGI_GEOFENCE("Fail to set bssid_info for wifi because of malloc fail");
 			__emit_fence_event(geofence_server, place_id, -1, ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_OUT_OF_MEMORY, GEOFENCE_MANAGE_FENCE_ADDED);
+			g_free(item_data);
 			return -1;
 		}
 		g_strlcpy(wifi_info->bssid, bssid, WLAN_BSSID_LEN);
@@ -1628,6 +1638,8 @@ static int dbus_add_fence_cb(const gchar *app_id,
 			if (ret != FENCE_ERR_NONE)
 				LOGI_GEOFENCE("Fail to delete fence_id[%d] from common table", fence_id);
 			__emit_fence_event(geofence_server, place_id, -1, ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_DATABASE, GEOFENCE_MANAGE_FENCE_ADDED);
+			g_free(wifi_info);
+			g_free(item_data);
 			return -1;
 		}
 		item_data->priv = (void *) wifi_info;
@@ -1639,6 +1651,7 @@ static int dbus_add_fence_cb(const gchar *app_id,
 		if (bt_info == NULL) {
 			LOGI_GEOFENCE("Fail to set bssid_info for BT because of malloc fail");
 			__emit_fence_event(geofence_server, place_id, -1, ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_OUT_OF_MEMORY, GEOFENCE_MANAGE_FENCE_ADDED);
+			g_free(item_data);
 			return -1;
 		}
 		bt_info->enabled = TRUE;
@@ -1653,6 +1666,8 @@ static int dbus_add_fence_cb(const gchar *app_id,
 			if (ret != FENCE_ERR_NONE)
 				LOGI_GEOFENCE("Fail to delete fence_id[%d] from common table", fence_id);
 			__emit_fence_event(geofence_server, place_id, -1, ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_DATABASE, GEOFENCE_MANAGE_FENCE_ADDED);
+			g_free(bt_info);
+			g_free(item_data);
 			return -1;
 		}
 		item_data->priv = (void *) bt_info;
@@ -2419,7 +2434,7 @@ static void __activity_cb(activity_type_e type, const activity_data_h data, doub
 {
 	FUNC_ENTRANCE_SERVER
 	GeofenceServer *geofence_server = (GeofenceServer *)user_data;
-	activity_accuracy_e accuracy;
+	activity_accuracy_e accuracy = ACTIVITY_ACCURACY_LOW;
 	int result = ACTIVITY_ERROR_NONE;
 
 	if (error != ACTIVITY_ERROR_NONE) {
