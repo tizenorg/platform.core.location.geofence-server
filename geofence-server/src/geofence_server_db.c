@@ -788,6 +788,8 @@ int geofence_manager_set_place_info(place_info_s *place_info, int *place_id)
 	ret = sqlite3_prepare_v2(db_info_s.handle, query, -1, &state, &tail);
 	if (ret != SQLITE_OK) {
 		LOGI_GEOFENCE("Error: %s", sqlite3_errmsg(db_info_s.handle));
+		g_free(place_name);
+		g_free(appid);
 		sqlite3_free(query);
 		return FENCE_ERR_PREPARE;
 	}
@@ -845,6 +847,7 @@ int geofence_manager_set_common_info(fence_common_info_s *fence_info, int *fence
 	ret = sqlite3_prepare_v2(db_info_s.handle, query, -1, &state, &tail);
 	if (ret != SQLITE_OK) {
 		LOGI_GEOFENCE("Error: %s", sqlite3_errmsg(db_info_s.handle));
+		g_free(appid);
 		sqlite3_free(query);
 		return FENCE_ERR_PREPARE;
 	}

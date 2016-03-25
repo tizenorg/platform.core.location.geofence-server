@@ -70,7 +70,6 @@ static void bt_le_scan_result_cb(int result, bt_adapter_le_device_scan_result_in
 	int ret = BT_ERROR_NONE;
 	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
 	LOGI_GEOFENCE("Current addresses: %s", geofence_server->ble_info);
-	LOGI_GEOFENCE("Received address: %s", info->remote_address);
 
 	if (info == NULL) {
 		LOGI_GEOFENCE("Stopping scan as there is no BLE address found");
@@ -79,6 +78,8 @@ static void bt_le_scan_result_cb(int result, bt_adapter_le_device_scan_result_in
 			LOGE_GEOFENCE("Unable to stop the BLE scan, error: %d", ret);
 		return;
 	}
+	LOGI_GEOFENCE("Received address: %s", info->remote_address);
+
 	if (!g_ascii_strcasecmp(geofence_server->ble_info, "")) {
 		g_stpcpy(geofence_server->ble_info, info->remote_address);
 	} else if (!__check_for_match(geofence_server->ble_info, info->remote_address)) { /* If duplicate does not exist */
