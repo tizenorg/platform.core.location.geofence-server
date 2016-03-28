@@ -75,9 +75,8 @@ static bool __is_support_wps()
 	const char *wps_feature = "http://tizen.org/feature/location.wps";
 	bool is_wps_supported = false;
 	system_info_get_platform_bool(wps_feature, &is_wps_supported);
-	if (is_wps_supported == true) {
+	if (is_wps_supported == true)
 		location_manager_is_enabled_method(LOCATIONS_METHOD_WPS, &is_wps_supported);
-	}
 
 	return is_wps_supported;
 }
@@ -85,38 +84,38 @@ static bool __is_support_wps()
 static const char *__convert_wifi_error_to_string(wifi_error_e err_type)
 {
 	switch (err_type) {
-		case WIFI_ERROR_NONE:
-			return "NONE";
-		case WIFI_ERROR_INVALID_PARAMETER:
-			return "INVALID_PARAMETER";
-		case WIFI_ERROR_OUT_OF_MEMORY:
-			return "OUT_OF_MEMORY";
-		case WIFI_ERROR_INVALID_OPERATION:
-			return "INVALID_OPERATION";
-		case WIFI_ERROR_ADDRESS_FAMILY_NOT_SUPPORTED:
-			return "ADDRESS_FAMILY_NOT_SUPPORTED";
-		case WIFI_ERROR_OPERATION_FAILED:
-			return "OPERATION_FAILED";
-		case WIFI_ERROR_NO_CONNECTION:
-			return "NO_CONNECTION";
-		case WIFI_ERROR_NOW_IN_PROGRESS:
-			return "NOW_IN_PROGRESS";
-		case WIFI_ERROR_ALREADY_EXISTS:
-			return "ALREADY_EXISTS";
-		case WIFI_ERROR_OPERATION_ABORTED:
-			return "OPERATION_ABORTED";
-		case WIFI_ERROR_DHCP_FAILED:
-			return "DHCP_FAILED";
-		case WIFI_ERROR_INVALID_KEY:
-			return "INVALID_KEY";
-		case WIFI_ERROR_NO_REPLY:
-			return "NO_REPLY";
-		case WIFI_ERROR_SECURITY_RESTRICTED:
-			return "SECURITY_RESTRICTED";
-		case WIFI_ERROR_PERMISSION_DENIED:
-			return "PERMISSION_DENIED";
-		default:
-			return "NOT Defined";
+	case WIFI_ERROR_NONE:
+		return "NONE";
+	case WIFI_ERROR_INVALID_PARAMETER:
+		return "INVALID_PARAMETER";
+	case WIFI_ERROR_OUT_OF_MEMORY:
+		return "OUT_OF_MEMORY";
+	case WIFI_ERROR_INVALID_OPERATION:
+		return "INVALID_OPERATION";
+	case WIFI_ERROR_ADDRESS_FAMILY_NOT_SUPPORTED:
+		return "ADDRESS_FAMILY_NOT_SUPPORTED";
+	case WIFI_ERROR_OPERATION_FAILED:
+		return "OPERATION_FAILED";
+	case WIFI_ERROR_NO_CONNECTION:
+		return "NO_CONNECTION";
+	case WIFI_ERROR_NOW_IN_PROGRESS:
+		return "NOW_IN_PROGRESS";
+	case WIFI_ERROR_ALREADY_EXISTS:
+		return "ALREADY_EXISTS";
+	case WIFI_ERROR_OPERATION_ABORTED:
+		return "OPERATION_ABORTED";
+	case WIFI_ERROR_DHCP_FAILED:
+		return "DHCP_FAILED";
+	case WIFI_ERROR_INVALID_KEY:
+		return "INVALID_KEY";
+	case WIFI_ERROR_NO_REPLY:
+		return "NO_REPLY";
+	case WIFI_ERROR_SECURITY_RESTRICTED:
+		return "SECURITY_RESTRICTED";
+	case WIFI_ERROR_PERMISSION_DENIED:
+		return "PERMISSION_DENIED";
+	default:
+		return "NOT Defined";
 	}
 }
 
@@ -266,9 +265,9 @@ void device_display_changed_cb(device_callback_e type, void *value, void *user_d
 					LOGD_GEOFENCE("Scanning for BLE and read DB");
 					g_stpcpy(geofence_server->ble_info, "");
 					ret = bt_adapter_le_start_scan(bt_le_scan_result_display_cb, geofence_server);
-					if (ret != BT_ERROR_NONE) {
+					if (ret != BT_ERROR_NONE)
 						LOGE_GEOFENCE("Fail to start ble scan. %d", ret);
-					}
+
 				}
 			} else if (state == DISPLAY_STATE_SCREEN_DIM)
 				LOGI_GEOFENCE("State: DIM");
@@ -306,9 +305,9 @@ static int __emit_fence_inout(GeofenceServer *geofence_server, int fence_id, geo
 		/*LOGD_GEOFENCE("FENCE_IN to be set, current state: %d", item_data->common_info.status);*/
 		if (item_data->common_info.status != GEOFENCE_FENCE_STATE_IN) {
 			geofence_dbus_server_send_geofence_inout_changed(geofence_server->geofence_dbus_server,	item_data->common_info.appid, fence_id,	item_data->common_info.access_type, GEOFENCE_EMIT_STATE_IN);
-			if (item_data->client_status == GEOFENCE_CLIENT_STATUS_START) {
+			if (item_data->client_status == GEOFENCE_CLIENT_STATUS_START)
 				item_data->client_status = GEOFENCE_CLIENT_STATUS_RUNNING;
-			}
+
 			LOGD_GEOFENCE("%d : FENCE_IN", fence_id);
 #ifdef TIZEN_ENGINEER_MODE
 			GEOFENCE_PRINT_LOG("FENCE_IN");
@@ -322,9 +321,9 @@ static int __emit_fence_inout(GeofenceServer *geofence_server, int fence_id, geo
 		if (item_data->common_info.status != GEOFENCE_FENCE_STATE_OUT) {
 			geofence_dbus_server_send_geofence_inout_changed(geofence_server->geofence_dbus_server,	item_data->common_info.appid, fence_id,	item_data->common_info.access_type, GEOFENCE_EMIT_STATE_OUT);
 			__emit_fence_proximity(geofence_server, fence_id, GEOFENCE_PROXIMITY_UNCERTAIN);
-			if (item_data->client_status ==	GEOFENCE_CLIENT_STATUS_START) {
+			if (item_data->client_status ==	GEOFENCE_CLIENT_STATUS_START)
 				item_data->client_status = GEOFENCE_CLIENT_STATUS_RUNNING;
-			}
+
 			LOGD_GEOFENCE("%d : FENCE_OUT", fence_id);
 #ifdef TIZEN_ENGINEER_MODE
 			GEOFENCE_PRINT_LOG("FENCE_OUT");
@@ -347,11 +346,11 @@ static int __emit_fence_proximity(GeofenceServer *geofence_server, int fence_id,
 	geofence_proximity_provider_e provider = GEOFENCE_PROXIMITY_PROVIDER_LOCATION;
 	GeofenceItemData *item_data = __get_item_by_fence_id(fence_id, geofence_server);
 	if (item_data) {
-		if (item_data->common_info.type == GEOFENCE_TYPE_WIFI) {
+		if (item_data->common_info.type == GEOFENCE_TYPE_WIFI)
 			provider = GEOFENCE_PROXIMITY_PROVIDER_WIFI;
-		} else if (item_data->common_info.type == GEOFENCE_TYPE_BT) {
+		else if (item_data->common_info.type == GEOFENCE_TYPE_BT)
 			provider = GEOFENCE_PROXIMITY_PROVIDER_BLUETOOTH;
-		}
+
 		geofence_dbus_server_send_geofence_proximity_changed(geofence_server->geofence_dbus_server, item_data->common_info.appid, fence_id, item_data->common_info.access_type, state, provider);
 		item_data->common_info.proximity_status = state;
 	} else {
@@ -367,13 +366,13 @@ static void __check_proximity_for_fence(double distance, int fence_id, int radiu
 	int ret = BT_ERROR_NONE;
 	geofence_proximity_state_e state = GEOFENCE_PROXIMITY_UNCERTAIN;
 	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
-	if (distance <= 50.0) {
+	if (distance <= 50.0)
 		state = GEOFENCE_PROXIMITY_IMMEDIATE;
-	} else if (distance > 50.0 && distance <= 100.0) {
+	else if (distance > 50.0 && distance <= 100.0)
 		state = GEOFENCE_PROXIMITY_NEAR;
-	} else if (distance > 100.0 && distance <= radius) {
+	else if (distance > 100.0 && distance <= radius)
 		state = GEOFENCE_PROXIMITY_FAR;
-	}
+
 	if (current_state != state) {
 		LOGD_GEOFENCE("PROXIMITY ALERTING for fence: %d, alert: %d, distance: %f", fence_id, state, distance);
 		__emit_fence_proximity(geofence_server, fence_id, state);
@@ -382,9 +381,8 @@ static void __check_proximity_for_fence(double distance, int fence_id, int radiu
 				LOGD_GEOFENCE("Scanning for BLE and storing in DB");
 				g_stpcpy(geofence_server->ble_info, "");
 				ret = bt_adapter_le_start_scan(bt_le_scan_result_cb, geofence_server);
-				if (ret != BT_ERROR_NONE) {
+				if (ret != BT_ERROR_NONE)
 					LOGE_GEOFENCE("Fail to start ble scan. %d", ret);
-				}
 			} else if (current_state == GEOFENCE_PROXIMITY_IMMEDIATE) { /* Stopping the scan if state changes */
 				ret = bt_adapter_le_stop_scan();
 				if (ret != BT_ERROR_NONE)
@@ -421,9 +419,8 @@ static void __check_inout_by_gps(double latitude, double longitude, int fence_id
 		__check_proximity_for_fence(distance, item_data->common_info.fence_id, geocoordinate_info->radius, item_data->common_info.proximity_status, geofence_server);
 	/*}*/
 
-	if (__emit_fence_inout(geofence_server, item_data->common_info.fence_id, status) == 0 && status == GEOFENCE_FENCE_STATE_IN) {
+	if (__emit_fence_inout(geofence_server, item_data->common_info.fence_id, status) == 0 && status == GEOFENCE_FENCE_STATE_IN)
 		LOGD_GEOFENCE("Disable timer");
-	}
 }
 
 static void __stop_gps_alarms(void *user_data)
@@ -570,21 +567,18 @@ static void __stop_gps_positioning(gpointer userdata)
 	int ret = 0;
 	if (geofence_server->loc_gps_started == TRUE) {
 		ret = location_manager_stop(geofence_server->loc_gps_manager);
-		if (ret != LOCATIONS_ERROR_NONE) {
+		if (ret != LOCATIONS_ERROR_NONE)
 			return;
-		}
 		geofence_server->loc_gps_started = FALSE;
 		ret = location_manager_unset_position_updated_cb(geofence_server->loc_gps_manager);
-		if (ret != LOCATIONS_ERROR_NONE) {
+		if (ret != LOCATIONS_ERROR_NONE)
 			return;
-		}
 	}
 
 	if (geofence_server->loc_gps_manager != NULL) {
 		ret = location_manager_destroy(geofence_server->loc_gps_manager);
-		if (ret != LOCATIONS_ERROR_NONE) {
+		if (ret != LOCATIONS_ERROR_NONE)
 			return;
-		}
 		geofence_server->loc_gps_manager = NULL;
 	}
 }
@@ -634,7 +628,7 @@ static void __process_best_location(GeofenceServer *geofence_server)
 
 	int gpsdiff = 0;
 	int wpsdiff = 0;
-	
+
 	/* Check if any of the fix is null just return. It doesn't make sense to compare if only one fix is available*/
 	if (geofence_server->gps_fix_info == NULL || geofence_server->wps_fix_info == NULL)
 		return;
@@ -685,9 +679,9 @@ static void __geofence_standalone_gps_position_changed_cb(double latitude, doubl
 	int ret = LOCATIONS_ERROR_NONE;
 
 	/* Allocate memory for the location_info structure */
-	if (geofence_server->gps_fix_info == NULL) {
+	if (geofence_server->gps_fix_info == NULL)
 		geofence_server->gps_fix_info = (location_fix_info_s *)g_malloc(sizeof(location_fix_info_s));
-	}
+
 	/* Store the location information in the structure for future use*/
 	if (geofence_server->gps_fix_info != NULL) {
 		geofence_server->gps_fix_info->latitude = latitude;
@@ -784,9 +778,8 @@ static void __geofence_gps_position_changed_cb(double latitude, double longitude
 	}
 
 	/* Allocate memory for the location_info structure */
-	if (geofence_server->gps_fix_info == NULL) {
+	if (geofence_server->gps_fix_info == NULL)
 		geofence_server->gps_fix_info = (location_fix_info_s *)g_malloc(sizeof(location_fix_info_s));
-	}
 
 	/* Store the location information in the structure for future use*/
 	if (geofence_server->gps_fix_info != NULL) {
@@ -802,7 +795,7 @@ static void __geofence_gps_position_changed_cb(double latitude, double longitude
 	} else {
 		LOGD_GEOFENCE("Invalid GPS fix data");
 		return;
-        }
+	}
 	geofence_server->last_loc_time = timestamp;
 
 	if (geofence_server->wps_fix_info && __get_time_diff(geofence_server->wps_fix_info->timestamp) <= 20 && geofence_server->gps_fix_info->accuracy <= 50.0) {
@@ -848,9 +841,8 @@ static void __geofence_wps_position_changed_cb(double latitude, double longitude
 	int interval = 0;
 
 	/* Allocate memory for the location_info structure */
-	if (geofence_server->wps_fix_info == NULL) {
+	if (geofence_server->wps_fix_info == NULL)
 		geofence_server->wps_fix_info = (location_fix_info_s *)g_malloc(sizeof(location_fix_info_s));
-	}
 	 /*Remove the timeout callback that might be running when requesting for fix.*/
 	if (geofence_server->wps_timeout_alarm_id != -1) {
 		/*LOGI_GEOFENCE("Removing the timeout alarm from restart gps");*/
@@ -883,18 +875,17 @@ static void __geofence_wps_position_changed_cb(double latitude, double longitude
 		return;/* There is no valid fence with this fence id. So return*/
 
 	geocoordinate_info_s *geocoordinate_info = (geocoordinate_info_s *)item_data->priv;
-		
+
 	double interval_dist = (min_distance - geocoordinate_info->radius) - geofence_server->wps_fix_info->accuracy;
 	LOGI_GEOFENCE("Distance for interval: %f", interval_dist);
-	if (interval_dist < 15000) {
+	if (interval_dist < 15000)
 		interval = interval_dist/25; /*secs*/ /*Assuming 90 km/hr of speed - So 25 mtrs covered in 1 sec*/
-	} else if (interval_dist >= 15000 && interval_dist < 18000) {
+	else if (interval_dist >= 15000 && interval_dist < 18000)
 		interval = 10 * 60; /* 10 mins */
-	} else if (interval_dist >= 18000 && interval_dist < 20000) {
+	else if (interval_dist >= 18000 && interval_dist < 20000)
 		interval = 12 * 60; /* 12 mins */
-	} else if (interval_dist >= 20000) {
+	else if (interval_dist >= 20000)
 		interval = 15 * 60; /*15 mins*/
-	}
 	if (interval < 15)
 		interval = 15; /*15 sec */
 
@@ -992,11 +983,10 @@ void bt_adapter_device_discovery_state_cb(int result, bt_adapter_device_discover
 				tracking_fences = g_list_next(tracking_fences);
 				item_data = __get_item_by_fence_id(tracking_fence_id, geofence_server);
 				if (item_data && item_data->common_info.type == GEOFENCE_TYPE_BT) {
-					if (item_data->is_bt_status_in == true) {
+					if (item_data->is_bt_status_in == true)
 						__emit_fence_inout(geofence_server, item_data->common_info.fence_id, GEOFENCE_FENCE_STATE_IN);
-					} else {
+					else
 						__emit_fence_inout(geofence_server, item_data->common_info.fence_id, GEOFENCE_FENCE_STATE_OUT);
-					}
 					item_data->is_bt_status_in = false;
 				}
 			}
@@ -1006,9 +996,8 @@ void bt_adapter_device_discovery_state_cb(int result, bt_adapter_device_discover
 		LOGI_GEOFENCE("rssi: %d is_bonded: %d", discovery_info->rssi, discovery_info->is_bonded);
 
 		if (geofence_server->running_bt_cnt > 0) {
-			for (i = 0; i < discovery_info->service_count; i++) {
+			for (i = 0; i < discovery_info->service_count; i++)
 				LOGI_GEOFENCE("uuid: %s", discovery_info->service_uuid[i]);
-			}
 			LOGI_GEOFENCE("Tracking list is being checked for the BT geofence");
 			__check_tracking_list(discovery_info->remote_address, geofence_server, GEOFENCE_TYPE_BT);
 		}
@@ -1043,9 +1032,8 @@ static void geofence_network_evt_cb(net_event_info_t *event_cb, void *user_data)
 				}
 				if (gps_state == 1) {
 					ret = __start_gps_positioning(geofence_server, __geofence_standalone_gps_position_changed_cb);
-					if (ret != FENCE_ERR_NONE) {
+					if (ret != FENCE_ERR_NONE)
 						LOGE_GEOFENCE("Fail to start standalone gps positioning. Error[%d]", ret);
-					}
 				}
 			} else {
 				if (__isDataConnected() == true) {/*&& wps_state == 1) {*/
@@ -1056,9 +1044,8 @@ static void geofence_network_evt_cb(net_event_info_t *event_cb, void *user_data)
 						__stop_gps_alarms(geofence_server);
 						/**** Start the WPS as mobile data is connected and wifi and wps are on *******/
 						ret = __start_wps_positioning(geofence_server, __geofence_wps_position_changed_cb);
-						if (ret != FENCE_ERR_NONE) {
+						if (ret != FENCE_ERR_NONE)
 							LOGE_GEOFENCE("Fail to start wps positioning. Error[%d]", ret);
-						}
 					}
 				}
 			}
@@ -1074,11 +1061,10 @@ static void geofence_network_evt_cb(net_event_info_t *event_cb, void *user_data)
 			if (geofence_server->loc_gps_started_by_wps == false && geofence_server->loc_gps_started == true) {
 				__stop_gps_positioning(geofence_server); /*GPS should be stopped only if it is running standalone*/
 				__stop_gps_alarms(geofence_server);
-			}	
-			ret = __start_wps_positioning(geofence_server, __geofence_wps_position_changed_cb);
-			if (ret != FENCE_ERR_NONE) {
-				LOGE_GEOFENCE("Fail to start wps positioning. Error[%d]", ret);
 			}
+			ret = __start_wps_positioning(geofence_server, __geofence_wps_position_changed_cb);
+			if (ret != FENCE_ERR_NONE)
+				LOGE_GEOFENCE("Fail to start wps positioning. Error[%d]", ret);
 		}
 		break;
 	case NET_EVENT_CLOSE_IND:
@@ -1093,9 +1079,8 @@ static void geofence_network_evt_cb(net_event_info_t *event_cb, void *user_data)
 				geofence_server->loc_gps_started_by_wps = false;
 			}
 			ret = __start_gps_positioning(geofence_server, __geofence_standalone_gps_position_changed_cb);
-			if (ret != FENCE_ERR_NONE) {
+			if (ret != FENCE_ERR_NONE)
 				LOGE_GEOFENCE("Fail to start standalone gps positioning. Error[%d]", ret);
-			}
 		}
 		break;
 	default:
@@ -1112,11 +1097,10 @@ static int __gps_timeout_cb(alarm_id_t alarm_id, void *user_data)
 	geofence_server->gps_timeout_alarm_id = -1;	/*resetting the alarm id*/
 	/*Stop the gps for sometime when there is no fix*/
 	__stop_gps_positioning(geofence_server);
-	if (geofence_server->loc_gps_started_by_wps == FALSE) {
+	if (geofence_server->loc_gps_started_by_wps == FALSE)
 		geofence_server->gps_alarm_id = _geofence_add_alarm(1 * 60, __gps_alarm_cb, geofence_server);
-	} else {
+	else
 		geofence_server->loc_gps_started_by_wps = FALSE;
-	}
 	return 0;
 }
 
@@ -1134,14 +1118,12 @@ static int __gps_alarm_cb(alarm_id_t alarm_id, void *user_data)
 	}
 	if (geofence_server->loc_gps_started_by_wps == true) {
 		ret = __start_gps_positioning(geofence_server, __geofence_gps_position_changed_cb);
-		if (ret != FENCE_ERR_NONE) {
+		if (ret != FENCE_ERR_NONE)
 			LOGE_GEOFENCE("Fail to start gps positioning. Error[%d]", ret);
-		}
 	} else {
 		ret = __start_gps_positioning(geofence_server, __geofence_standalone_gps_position_changed_cb);
-		if (ret != FENCE_ERR_NONE) {
+		if (ret != FENCE_ERR_NONE)
 			LOGE_GEOFENCE("Fail to start standalone gps positioning. Error[%d]", ret);
-		}
 	}
 	return 0;
 }
@@ -1178,20 +1160,17 @@ static int __wps_alarm_cb(alarm_id_t alarm_id, void *user_data)
 	}
 	if (__is_support_wps() == true && __isWifiOn() == true && __isDataConnected() == true) {
 		ret = __start_wps_positioning(geofence_server, __geofence_wps_position_changed_cb);
-		if (ret != FENCE_ERR_NONE) {
+		if (ret != FENCE_ERR_NONE)
 			LOGE_GEOFENCE("Fail to start wps positioning. Error[%d]", ret);
-		}
 	} else {
 		ret = __start_gps_positioning(geofence_server, __geofence_standalone_gps_position_changed_cb);
-		if (ret != FENCE_ERR_NONE) {
+		if (ret != FENCE_ERR_NONE)
 			LOGE_GEOFENCE("Fail to start standalone gps positioning. Error[%d]", ret);
-		}
 	}
 	return 0;
 }
 
-static void gps_setting_changed_cb(location_method_e method, bool enable,
-                                   void *user_data)
+static void gps_setting_changed_cb(location_method_e method, bool enable, void *user_data)
 {
 	FUNC_ENTRANCE_SERVER;
 	GeofenceServer *geofence_server = (GeofenceServer *) user_data;
@@ -1254,9 +1233,8 @@ static void gps_setting_changed_cb(location_method_e method, bool enable,
 				}
 			}
 		}
-		if (geofence_server->loc_gps_started_by_wps == true) {
+		if (geofence_server->loc_gps_started_by_wps == true)
 			geofence_server->loc_gps_started_by_wps = false; /*So that WPS will use GPS if needed in its next fix(wps fix)*/
-		}
 	} else if (enable == true && geofence_server->running_geopoint_cnt > 0) {
 		if (method == LOCATIONS_METHOD_GPS) {
 			geofence_server->loc_gps_started_by_wps = false; /* So that WPS will use GPS if needed in its next fix(wps fix) */
@@ -1292,9 +1270,8 @@ static void __free_geofence_list(gpointer userdata)
 	GList *tmp_fence_list = g_list_first(geofence_server->geofence_list);
 	while (tmp_fence_list) {
 		GeofenceItemData *tmp_data = (GeofenceItemData *)tmp_fence_list->data;
-		if (tmp_data) {
+		if (tmp_data)
 			g_free(tmp_data);
-		}
 		tmp_fence_list = g_list_next(tmp_fence_list);
 	}
 	geofence_server->geofence_list = NULL;
@@ -1382,11 +1359,10 @@ static void __stop_geofence_service(gint fence_id, const gchar *app_id, gpointer
 	ret = __check_fence_permission(fence_id, app_id);
 	if (ret != 1) {
 		LOGE("Permission denied or DB error occured while accessing the fence[%d]", fence_id);
-		if (ret == 0) {
+		if (ret == 0)
 			__emit_fence_event(geofence_server, place_id, fence_id,	ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_GEOFENCE_ACCESS_DENIED, GEOFENCE_MANAGE_FENCE_STOPPED);
-		} else {
+		else
 			__emit_fence_event(geofence_server, place_id, fence_id,	ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_DATABASE, GEOFENCE_MANAGE_FENCE_STOPPED);
-		}
 		return;
 	}
 	ret = geofence_manager_get_running_status(fence_id, &tracking_status);
@@ -1442,10 +1418,6 @@ static void __stop_geofence_service(gint fence_id, const gchar *app_id, gpointer
 			} else if (item_data->common_info.type == GEOFENCE_TYPE_BT) {
 				geofence_server->running_bt_cnt--;
 				LOGI_GEOFENCE("Removed bt fence: %d from tracking list", fence_id);
-
-				if (geofence_server->running_bt_cnt <= 0) {
-					/*May be unsetting the cb for bt discovery can be done here*/
-				}
 			} else if (item_data->common_info.type == GEOFENCE_TYPE_WIFI) {
 				/*NOTHING NEED TO BE DONE HERE EXCEPT DECREMENTING THE COUNT*/
 				geofence_server->running_wifi_cnt--;
@@ -1483,8 +1455,8 @@ static bool __isWifiOn(void)
 {
 	int network_state = -1;
 	vconf_get_int(VCONFKEY_WIFI_STATE, &network_state);
-        if (network_state == 0)
-                return false;
+	if (network_state == 0)
+			return false;
 	return true;
 }
 
@@ -1507,8 +1479,8 @@ static bool __isDataConnected(void)
 			if (network_state == VCONFKEY_NETWORK_CELLULAR_ON) {
 				rv = vconf_get_int(VCONFKEY_DNET_STATE, &data_state);
 				if (data_state == VCONFKEY_DNET_NORMAL_CONNECTED) {
-			        	LOGI_GEOFENCE("USING MOBILE DATA");
-			        	isDataConnected = true;
+					LOGI_GEOFENCE("USING MOBILE DATA");
+					isDataConnected = true;
 				}
 			}
 		}
@@ -1517,13 +1489,13 @@ static bool __isDataConnected(void)
 }
 
 static int dbus_add_fence_cb(const gchar *app_id,
-                             gint place_id,
-                             gint geofence_type,
-                             gdouble latitude,
-                             gdouble longitude,
-                             gint radius,
-                             const gchar *address,
-                             const gchar *bssid, const gchar *ssid, gpointer userdata)
+							gint place_id,
+							gint geofence_type,
+							gdouble latitude,
+							gdouble longitude,
+							gint radius,
+							const gchar *address,
+							const gchar *bssid, const gchar *ssid, gpointer userdata)
 {
 	FUNC_ENTRANCE_SERVER;
 	GeofenceServer *geofence_server = (GeofenceServer *) userdata;
@@ -1546,11 +1518,10 @@ static int dbus_add_fence_cb(const gchar *app_id,
 	ret = __check_place_permission(place_id, app_id);
 	if (ret != 1) {
 		LOGE("Unable to add the fence. Permission denied or DB error occured while accessing the place[%d]", place_id);
-		if (ret == 0) {
+		if (ret == 0)
 			__emit_fence_event(geofence_server, place_id, fence_id,	ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_GEOFENCE_ACCESS_DENIED, GEOFENCE_MANAGE_FENCE_ADDED);
-		} else {
+		else
 			__emit_fence_event(geofence_server, place_id, fence_id,	ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_DATABASE, GEOFENCE_MANAGE_FENCE_ADDED);
-		}
 		return -1;
 	}
 	/* create GeofenceItemData item, and append it into geofence_list*/
@@ -1565,11 +1536,10 @@ static int dbus_add_fence_cb(const gchar *app_id,
 	item_data->client_status = GEOFENCE_CLIENT_STATUS_NONE;
 	item_data->common_info.type = geofence_type;
 	/*fences added by myplaces application are public fences by default*/
-	if (!g_strcmp0(app_id, MYPLACES_APPID)) {
+	if (!g_strcmp0(app_id, MYPLACES_APPID))
 		item_data->common_info.access_type = ACCESS_TYPE_PUBLIC;
-	} else {
+	else
 		item_data->common_info.access_type = ACCESS_TYPE_PRIVATE;
-	}
 	item_data->common_info.enable = 1;
 	item_data->common_info.status = GEOFENCE_FENCE_STATE_UNCERTAIN;
 	item_data->common_info.proximity_status = GEOFENCE_PROXIMITY_UNCERTAIN;
@@ -1595,11 +1565,10 @@ static int dbus_add_fence_cb(const gchar *app_id,
 		}
 		geocoordinate_info->latitude = latitude;
 		geocoordinate_info->longitude = longitude;
-		if (radius < GEOFENCE_DEFAULT_RADIUS) {
+		if (radius < GEOFENCE_DEFAULT_RADIUS)
 			geocoordinate_info->radius = GEOFENCE_DEFAULT_RADIUS;
-		} else {
+		else
 			geocoordinate_info->radius = radius;
-		}
 		g_strlcpy(geocoordinate_info->address, address, ADDRESS_LEN);
 
 		/*Geopoint information is saved in the DB*/
@@ -1673,11 +1642,10 @@ static int dbus_add_fence_cb(const gchar *app_id,
 		item_data->priv = (void *) bt_info;
 	}
 	/*Adding the data to the geofence_list which contains the added geofences list information*/
-	if (geofence_server->geofence_list == NULL) {
+	if (geofence_server->geofence_list == NULL)
 		geofence_server->geofence_list = g_list_append(geofence_server->geofence_list, item_data);
-	} else {
+	else
 		geofence_server->geofence_list = g_list_insert_before(geofence_server->geofence_list, next_item_ptr, item_data);
-	}
 	/*This code is just for testing purpose. It will be removed after the development phase - Karthik*/
 	int temp_cnt = 0;
 	GList *temp_list = g_list_first(geofence_server->geofence_list);
@@ -1695,8 +1663,7 @@ static int dbus_add_fence_cb(const gchar *app_id,
 	return fence_id;
 }
 
-static int dbus_add_place_cb(const gchar *app_id,
-                             const gchar *place_name, gpointer userdata)
+static int dbus_add_place_cb(const gchar *app_id, const gchar *place_name, gpointer userdata)
 {
 	FUNC_ENTRANCE_SERVER;
 	int place_id = -1;
@@ -1923,11 +1890,10 @@ static void dbus_get_place_name_cb(gint place_id, const gchar *app_id, char **pl
 	ret = __check_place_permission(place_id, app_id);
 	if (ret != 1) {
 		LOGE("Unable to get the place name. Permission denied or DB error occured while accessing the place[%d]", place_id);
-		if (ret == 0) {
+		if (ret == 0)
 			*error_code = GEOFENCE_SERVER_ERROR_PLACE_ACCESS_DENIED;
-		} else {
+		else
 			*error_code = GEOFENCE_SERVER_ERROR_DATABASE;
-		}
 		return;
 	}
 	ret = geofence_manager_get_place_name(place_id, place_name);
@@ -1938,8 +1904,7 @@ static void dbus_get_place_name_cb(gint place_id, const gchar *app_id, char **pl
 	*error_code = GEOFENCE_SERVER_ERROR_NONE;
 }
 
-static void dbus_remove_place_cb(gint place_id, const gchar *app_id,
-                                 gpointer userdata)
+static void dbus_remove_place_cb(gint place_id, const gchar *app_id, gpointer userdata)
 {
 	FUNC_ENTRANCE_SERVER;
 	g_return_if_fail(userdata);
@@ -2114,8 +2079,7 @@ static void dbus_start_geofence_cb(gint fence_id, const gchar *app_id, gpointer 
 			return;
 		}
 		if (enable == 0) {
-			LOGI_GEOFENCE("Error - Fence[%d] is not enabled",
-			              fence_id);
+			LOGI_GEOFENCE("Error - Fence[%d] is not enabled", fence_id);
 			__emit_fence_event(geofence_server, place_id, fence_id,	ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_GEOFENCE_ACCESS_DENIED, GEOFENCE_MANAGE_FENCE_STARTED);
 			return;
 		}
@@ -2230,9 +2194,8 @@ static void dbus_start_geofence_cb(gint fence_id, const gchar *app_id, gpointer 
 			LOGI_GEOFENCE("Wifi is on...");
 			geofence_server->running_wifi_cnt++;	/*Incrementing the counter for wifi fence*/
 
-			if (item_data->priv != NULL) {
+			if (item_data->priv != NULL)
 				wifi_info = (bssid_info_s *) item_data->priv;
-			}
 			rv = wifi_get_connected_ap(&ap_h);
 			if (rv != WIFI_ERROR_NONE) {
 				LOGI_GEOFENCE("Fail/not connected to get the connected AP: [%s] , geofence will be added to the fence list", __convert_wifi_error_to_string(rv));
@@ -2263,17 +2226,15 @@ static void dbus_start_geofence_cb(gint fence_id, const gchar *app_id, gpointer 
 			status_to_be_emitted = GEOFENCE_FENCE_STATE_OUT;
 		}
 	} else {
-		LOGI_GEOFENCE("Invalid fence_type[%d]",
-		              item_data->common_info.type);
+		LOGI_GEOFENCE("Invalid fence_type[%d]", item_data->common_info.type);
 		return;
 	}
 	/*Adding the fence to the tracking list*/
 	LOGI_GEOFENCE("Add to tracklist: Fence id: %d", fence_id);
-	if (geofence_server->tracking_list == NULL) {
+	if (geofence_server->tracking_list == NULL)
 		geofence_server->tracking_list = g_list_append(geofence_server->tracking_list, GINT_TO_POINTER(fence_id));
-	} else {
+	else
 		geofence_server->tracking_list = g_list_insert_before(geofence_server->tracking_list, next_item_ptr, GINT_TO_POINTER(fence_id));
-	}
 	LOGI_GEOFENCE("Added fence id: Fence id: %d", fence_id);
 
 	__emit_fence_event(geofence_server, place_id, fence_id, access_type, app_id, GEOFENCE_SERVER_ERROR_NONE, GEOFENCE_MANAGE_FENCE_STARTED);
@@ -2531,32 +2492,32 @@ static GVariant *dbus_get_geofences_cb(int place_id, const gchar *app_id, int *f
 			LOGI_GEOFENCE("fence_id: %d, place_id: %d, latitude: %f, longitude: %f, radius: %d", item->fence_id, item->param.place_id, item->param.latitude, item->param.longitude,	item->param.radius);
 
 			switch (item->param.type) {
-				case GEOFENCE_TYPE_GEOPOINT: {
-						g_variant_builder_add(&b, "{sv}", "place_id", g_variant_new_int32(item->param.place_id));
-						g_variant_builder_add(&b, "{sv}", "geofence_type", g_variant_new_int32(item->param.type));
-						g_variant_builder_add(&b, "{sv}", "latitude", g_variant_new_double(item->param.latitude));
-						g_variant_builder_add(&b, "{sv}", "longitude", g_variant_new_double(item->param.longitude));
-						g_variant_builder_add(&b, "{sv}", "radius", g_variant_new_int32(item->param.radius));
-						g_variant_builder_add(&b, "{sv}", "address", g_variant_new_string(item->param.address));
-						g_variant_builder_add(&b, "{sv}", "bssid", g_variant_new_string("NA"));
-						g_variant_builder_add(&b, "{sv}", "ssid", g_variant_new_string("NA"));
-					}
-					break;
-				case GEOFENCE_TYPE_WIFI:
-				case GEOFENCE_TYPE_BT: {
-						g_variant_builder_add(&b, "{sv}", "place_id", g_variant_new_int32(item->param.place_id));
-						g_variant_builder_add(&b, "{sv}", "geofence_type", g_variant_new_int32(item->param.type));
-						g_variant_builder_add(&b, "{sv}", "latitude", g_variant_new_double(0.0));
-						g_variant_builder_add(&b, "{sv}", "longitude", g_variant_new_double(0.0));
-						g_variant_builder_add(&b, "{sv}", "radius", g_variant_new_int32(0.0));
-						g_variant_builder_add(&b, "{sv}", "address", g_variant_new_string("NA"));
-						g_variant_builder_add(&b, "{sv}", "bssid", g_variant_new_string(item->param.bssid));
-						g_variant_builder_add(&b, "{sv}", "ssid", g_variant_new_string(item->param.ssid));
-					}
-					break;
-				default:
-					LOGI_GEOFENCE("Unsupported type: [%d]",	item->param.type);
-					break;
+			case GEOFENCE_TYPE_GEOPOINT: {
+					g_variant_builder_add(&b, "{sv}", "place_id", g_variant_new_int32(item->param.place_id));
+					g_variant_builder_add(&b, "{sv}", "geofence_type", g_variant_new_int32(item->param.type));
+					g_variant_builder_add(&b, "{sv}", "latitude", g_variant_new_double(item->param.latitude));
+					g_variant_builder_add(&b, "{sv}", "longitude", g_variant_new_double(item->param.longitude));
+					g_variant_builder_add(&b, "{sv}", "radius", g_variant_new_int32(item->param.radius));
+					g_variant_builder_add(&b, "{sv}", "address", g_variant_new_string(item->param.address));
+					g_variant_builder_add(&b, "{sv}", "bssid", g_variant_new_string("NA"));
+					g_variant_builder_add(&b, "{sv}", "ssid", g_variant_new_string("NA"));
+				}
+				break;
+			case GEOFENCE_TYPE_WIFI:
+			case GEOFENCE_TYPE_BT: {
+					g_variant_builder_add(&b, "{sv}", "place_id", g_variant_new_int32(item->param.place_id));
+					g_variant_builder_add(&b, "{sv}", "geofence_type", g_variant_new_int32(item->param.type));
+					g_variant_builder_add(&b, "{sv}", "latitude", g_variant_new_double(0.0));
+					g_variant_builder_add(&b, "{sv}", "longitude", g_variant_new_double(0.0));
+					g_variant_builder_add(&b, "{sv}", "radius", g_variant_new_int32(0.0));
+					g_variant_builder_add(&b, "{sv}", "address", g_variant_new_string("NA"));
+					g_variant_builder_add(&b, "{sv}", "bssid", g_variant_new_string(item->param.bssid));
+					g_variant_builder_add(&b, "{sv}", "ssid", g_variant_new_string(item->param.ssid));
+				}
+				break;
+			default:
+				LOGI_GEOFENCE("Unsupported type: [%d]",	item->param.type);
+				break;
 			}
 
 			/* Close container*/
@@ -2681,9 +2642,8 @@ static void __init_geofencemanager(GeofenceServer *geofence_server)
 	geofence_server->activity_in_vehicle_h = NULL;
 
 	/*Initializing the DB to store the fence informations*/
-	if (geofence_manager_db_init() != FENCE_ERR_NONE) {
+	if (geofence_manager_db_init() != FENCE_ERR_NONE)
 		LOGI_GEOFENCE("Error initalizing the DB");
-	}
 	/*Adding default places in the DB*/
 	int place_id = DEFAULT_PLACE_HOME;
 	int count = -1;
@@ -2691,13 +2651,12 @@ static void __init_geofencemanager(GeofenceServer *geofence_server)
 	while (place_id <= DEFAULT_PLACE_CAR) {
 		if (geofence_manager_get_place_count_by_placeid(place_id, &count) == FENCE_ERR_NONE) {
 			if (count == 0) {
-				if (place_id == DEFAULT_PLACE_HOME) {
+				if (place_id == DEFAULT_PLACE_HOME)
 					__add_default_place("Home");
-				} else if (place_id == DEFAULT_PLACE_OFFICE) {
+				else if (place_id == DEFAULT_PLACE_OFFICE)
 					__add_default_place("Office");
-				} else if (place_id == DEFAULT_PLACE_CAR) {
+				else if (place_id == DEFAULT_PLACE_CAR)
 					__add_default_place("Car");
-				}
 			}
 		} else {
 			LOGI_GEOFENCE("Error adding the default place: %d", place_id);

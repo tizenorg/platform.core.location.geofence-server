@@ -102,9 +102,8 @@ static void emit_bt_geofence_proximity_changed(GeofenceServer *geofence_server, 
 			LOGD_GEOFENCE("BT Fence. Scanning for BLE and storing in DB");
 			g_stpcpy(geofence_server->ble_info, "");
 			ret = bt_adapter_le_start_scan(bt_le_scan_result_cb, geofence_server);
-			if (ret != BT_ERROR_NONE) {
+			if (ret != BT_ERROR_NONE)
 				LOGE_GEOFENCE("Fail to start ble scan. %d", ret);
-			}
 		}
 		item_data->common_info.proximity_status = fence_proximity_status;
 	}
@@ -117,22 +116,21 @@ static void emit_bt_geofence_proximity_changed(GeofenceServer *geofence_server, 
 static void emit_bt_geofence_inout_changed(GeofenceServer *geofence_server, GeofenceItemData *item_data, int fence_status)
 {
 	FUNC_ENTRANCE_SERVER
-	char *app_id = (char *)g_malloc0(sizeof(char) * APP_ID_LEN);
+	char *app_id = (char *)g_malloc0(sizeof(char) *APP_ID_LEN);
 	g_strlcpy(app_id, item_data->common_info.appid, APP_ID_LEN);
 	if (app_id == NULL) {
 		LOGD_GEOFENCE("get app_id failed. fence_id [%d]", item_data->common_info.fence_id);
 		return;
 	}
 
-	if (fence_status == GEOFENCE_FENCE_STATE_IN) {
+	if (fence_status == GEOFENCE_FENCE_STATE_IN)
 		geofence_dbus_server_send_geofence_inout_changed(geofence_server->geofence_dbus_server, app_id, item_data->common_info.fence_id, item_data->common_info.access_type, GEOFENCE_EMIT_STATE_IN);
-	} else if (fence_status == GEOFENCE_FENCE_STATE_OUT) {
+	else if (fence_status == GEOFENCE_FENCE_STATE_OUT)
 		geofence_dbus_server_send_geofence_inout_changed(geofence_server->geofence_dbus_server, app_id, item_data->common_info.fence_id, item_data->common_info.access_type, GEOFENCE_EMIT_STATE_OUT);
-	}
 
-	if (item_data->client_status == GEOFENCE_CLIENT_STATUS_START) {
+	if (item_data->client_status == GEOFENCE_CLIENT_STATUS_START)
 		item_data->client_status = GEOFENCE_CLIENT_STATUS_RUNNING;
-	}
+
 	if (app_id)
 		free(app_id);
 }
