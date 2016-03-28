@@ -27,9 +27,8 @@ int _geofence_add_alarm(int interval, alarm_cb_t alarm_cb, void *userdata)
 	alarm_id_t alarm_id = -1;
 
 	ret = alarmmgr_add_alarm_withcb(ALARM_TYPE_DEFAULT, interval, 0, alarm_cb, geofence_server, &alarm_id);
-	if (ret != ALARMMGR_RESULT_SUCCESS) {
+	if (ret != ALARMMGR_RESULT_SUCCESS)
 		LOGE_GEOFENCE("Fail to alarmmgr_add_alarm_withcb : %d", ret);
-	}
 	LOGD_GEOFENCE("alarm_id : %d", alarm_id);
 
 	return alarm_id;
@@ -40,9 +39,8 @@ int _geofence_remove_alarm(alarm_id_t alarm_id)
 	FUNC_ENTRANCE_SERVER;
 	int ret = 0;
 	ret = alarmmgr_remove_alarm(alarm_id);
-	if (ret != ALARMMGR_RESULT_SUCCESS) {
+	if (ret != ALARMMGR_RESULT_SUCCESS)
 		LOGE_GEOFENCE("Fail to alarmmgr_remove_alarm : %d", ret);
-	}
 
 	return -1;
 }

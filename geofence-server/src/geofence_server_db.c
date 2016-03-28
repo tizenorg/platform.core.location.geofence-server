@@ -55,10 +55,10 @@ const char *col_radius = "r";
 #endif
 
 typedef enum {
-    FENCE_MAIN_TABLE = 0,	/*GeoFence */
-    FENCE_GEOCOORDINATE_TAB,	/*FenceGeocoordinate */
-    FENCE_GEOPOINT_WIFI_TABLE,	/*FenceCurrentLocation */
-    FENCE_BSSID_TABLE	/*FenceBluetoothBssid */
+	FENCE_MAIN_TABLE = 0,	/*GeoFence */
+	FENCE_GEOCOORDINATE_TAB,	/*FenceGeocoordinate */
+	FENCE_GEOPOINT_WIFI_TABLE,	/*FenceCurrentLocation */
+	FENCE_BSSID_TABLE	/*FenceBluetoothBssid */
 } fence_table_type_e;
 
 static struct {
@@ -196,9 +196,8 @@ static inline int __geofence_manager_db_create_places_table(void)
 		return FENCE_ERR_SQLITE_FAIL;
 	}
 
-	if (sqlite3_changes(db_info_s.handle) == 0) {
+	if (sqlite3_changes(db_info_s.handle) == 0)
 		LOGI_GEOFENCE("No changes  to DB");
-	}
 	sqlite3_free(ddl);
 	return FENCE_ERR_NONE;
 }
@@ -217,9 +216,8 @@ static inline int __geofence_manager_db_create_geofence_table(void)
 		return FENCE_ERR_SQLITE_FAIL;
 	}
 
-	if (sqlite3_changes(db_info_s.handle) == 0) {
+	if (sqlite3_changes(db_info_s.handle) == 0)
 		LOGI_GEOFENCE("No changes  to DB");
-	}
 	sqlite3_free(ddl);
 	return FENCE_ERR_NONE;
 }
@@ -238,9 +236,8 @@ static inline int __geofence_manager_db_create_geocoordinate_table(void)
 		return FENCE_ERR_SQLITE_FAIL;
 	}
 
-	if (sqlite3_changes(db_info_s.handle) == 0) {
+	if (sqlite3_changes(db_info_s.handle) == 0)
 		LOGI_GEOFENCE("No changes to DB");
-	}
 	sqlite3_free(ddl);
 	return FENCE_ERR_NONE;
 }
@@ -259,9 +256,8 @@ static inline int __geofence_manager_db_create_wifi_data_table(void)
 		return FENCE_ERR_SQLITE_FAIL;
 	}
 
-	if (sqlite3_changes(db_info_s.handle) == 0) {
+	if (sqlite3_changes(db_info_s.handle) == 0)
 		LOGI_GEOFENCE("No changes to DB");
-	}
 	sqlite3_free(ddl);
 	return FENCE_ERR_NONE;
 }
@@ -343,14 +339,11 @@ static int __geofence_manager_db_insert_bssid_info(const int fence_id, const cha
 	int index = 0;
 	int count = -1;
 	const char *tail;
-	char *bssid = NULL;
 
 	char *query = sqlite3_mprintf("INSERT INTO %Q(fence_id, bssid, ssid) VALUES (?, ?, ?)", menu_table[FENCE_BSSID_TABLE]);
-	bssid = (char *)g_malloc0(sizeof(char) * WLAN_BSSID_LEN);
-	g_strlcpy(bssid, bssid_info, WLAN_BSSID_LEN);
-	LOGI_GEOFENCE("fence_id[%d], bssid[%s], ssid[%s]", fence_id, bssid, ssid);
+	LOGI_GEOFENCE("fence_id[%d], bssid[%s], ssid[%s]", fence_id, bssid_info, ssid);
 
-	ret = __geofence_manager_db_get_count_by_fence_id_and_bssid(fence_id, bssid, FENCE_BSSID_TABLE, &count);
+	ret = __geofence_manager_db_get_count_by_fence_id_and_bssid(fence_id, bssid_info, FENCE_BSSID_TABLE, &count);
 	if (ret != FENCE_ERR_NONE) {
 		LOGI_GEOFENCE("__geofence_manager_db_get_count_by_fence_id_and_bssid() failed. ERROR(%d)", ret);
 		sqlite3_free(query);
@@ -371,7 +364,7 @@ static int __geofence_manager_db_insert_bssid_info(const int fence_id, const cha
 	ret = sqlite3_bind_int(state, ++index, fence_id);
 	SQLITE3_RETURN(ret, sqlite3_errmsg(db_info_s.handle), state);
 
-	ret = sqlite3_bind_text(state, ++index, bssid, -1, SQLITE_STATIC);
+	ret = sqlite3_bind_text(state, ++index, bssid_info, -1, SQLITE_STATIC);
 	SQLITE3_RETURN(ret, sqlite3_errmsg(db_info_s.handle), state);
 
 	ret = sqlite3_bind_text(state, ++index, ssid, -1, SQLITE_STATIC);
@@ -381,7 +374,6 @@ static int __geofence_manager_db_insert_bssid_info(const int fence_id, const cha
 	if (ret != SQLITE_DONE) {
 		LOGI_GEOFENCE("sqlite3_step Error[%d] : %s", ret, sqlite3_errmsg(db_info_s.handle));
 		sqlite3_finalize(state);
-		g_free(bssid);
 		sqlite3_free(query);
 		return FENCE_ERR_SQLITE_FAIL;
 	}
@@ -389,7 +381,6 @@ static int __geofence_manager_db_insert_bssid_info(const int fence_id, const cha
 	sqlite3_reset(state);
 	sqlite3_clear_bindings(state);
 	sqlite3_finalize(state);
-	g_free(bssid);
 	sqlite3_free(query);
 	LOGI_GEOFENCE("fence_id[%d], bssid[%s], ssid[%s] inserted db table [%s] successfully.",	fence_id, bssid_info, ssid, menu_table[FENCE_BSSID_TABLE]);
 
@@ -408,15 +399,13 @@ static int __geofence_manager_db_insert_wifi_data_info(gpointer data, gpointer u
 	int index = 0;
 	int count = -1;
 	const char *tail;
-	char *bssid = NULL;
+
 	wifi_info = (wifi_info_s *) data;
-	bssid = (char *)g_malloc0(sizeof(char) * WLAN_BSSID_LEN);
-	g_strlcpy(bssid, wifi_info->bssid, WLAN_BSSID_LEN);
 	LOGI_GEOFENCE("fence_id[%d] bssid[%s]", *fence_id, wifi_info->bssid);
 
 	char *query = sqlite3_mprintf("INSERT INTO FenceGeopointWifi(fence_id, bssid) VALUES (?, ?)");
 
-	ret = __geofence_manager_db_get_count_by_fence_id_and_bssid(*fence_id, bssid, FENCE_GEOPOINT_WIFI_TABLE, &count);
+	ret = __geofence_manager_db_get_count_by_fence_id_and_bssid(*fence_id, wifi_info->bssid, FENCE_GEOPOINT_WIFI_TABLE, &count);
 	if (count > 0) {
 		LOGI_GEOFENCE("count = %d", count);
 		sqlite3_free(query);
@@ -433,14 +422,13 @@ static int __geofence_manager_db_insert_wifi_data_info(gpointer data, gpointer u
 	ret = sqlite3_bind_int(state, ++index, *fence_id);
 	SQLITE3_RETURN(ret, sqlite3_errmsg(db_info_s.handle), state);
 
-	ret = sqlite3_bind_text(state, ++index, bssid, -1, SQLITE_STATIC);
+	ret = sqlite3_bind_text(state, ++index, wifi_info->bssid, -1, SQLITE_STATIC);
 	SQLITE3_RETURN(ret, sqlite3_errmsg(db_info_s.handle), state);
 
 	ret = sqlite3_step(state);
 	if (ret != SQLITE_DONE) {
 		LOGI_GEOFENCE("sqlite3_step Error[%d] : %s", ret, sqlite3_errmsg(db_info_s.handle));
 		sqlite3_finalize(state);
-		g_free(bssid);
 		sqlite3_free(query);
 		return FENCE_ERR_SQLITE_FAIL;
 	}
@@ -448,7 +436,6 @@ static int __geofence_manager_db_insert_wifi_data_info(gpointer data, gpointer u
 	sqlite3_reset(state);
 	sqlite3_clear_bindings(state);
 	sqlite3_finalize(state);
-	g_free(bssid);
 	sqlite3_free(query);
 
 	return FENCE_ERR_NONE;
@@ -628,14 +615,12 @@ void __geofence_manager_generate_password(char *password)
 	int ret = 0;
 
 	ret = bt_adapter_get_address(&bt_address);
-	if (ret != BT_ERROR_NONE) {
+	if (ret != BT_ERROR_NONE)
 		LOGD_GEOFENCE("bt address get fail %d", ret);
-	}
 
 	ret = wifi_get_mac_address(&wifi_address);
-	if (ret != WIFI_ERROR_NONE) {
+	if (ret != WIFI_ERROR_NONE)
 		LOGD_GEOFENCE("wifi address get fail %d", ret);
-	}
 
 	if (bt_address) {
 		token = strtok_r(bt_address, ":", &save_token);
@@ -693,13 +678,13 @@ static int __check_db_file()
 {
 	int fd = -1;
 
-    fd = open(GEOFENCE_DB_FILE, O_RDONLY);
-    if (fd < 0) {
-             LOGW_GEOFENCE("DB file(%s) is not exist.", GEOFENCE_DB_FILE);
-             return -1;
-     }
-     close(fd);
-     return 0;
+	fd = open(GEOFENCE_DB_FILE, O_RDONLY);
+	if (fd < 0) {
+		LOGW_GEOFENCE("DB file(%s) is not exist.", GEOFENCE_DB_FILE);
+		return -1;
+	}
+	close(fd);
+	return 0;
 }
 
 /**
@@ -776,40 +761,29 @@ int geofence_manager_set_place_info(place_info_s *place_info, int *place_id)
 	int ret = SQLITE_OK;
 	int index = 0;
 	const char *tail;
-	char *appid = NULL;
-	char *place_name = NULL;
 	char *query = sqlite3_mprintf("INSERT INTO Places (access_type, place_name, app_id) VALUES (?, ?, ?)");
-
-	place_name = (char *)g_malloc0(sizeof(char) * PLACE_NAME_LEN);
-	g_strlcpy(place_name, place_info->place_name, PLACE_NAME_LEN);
-	appid = (char *)g_malloc0(sizeof(char) * APP_ID_LEN);
-	g_strlcpy(appid, place_info->appid, APP_ID_LEN);
 
 	ret = sqlite3_prepare_v2(db_info_s.handle, query, -1, &state, &tail);
 	if (ret != SQLITE_OK) {
 		LOGI_GEOFENCE("Error: %s", sqlite3_errmsg(db_info_s.handle));
-		g_free(place_name);
-		g_free(appid);
 		sqlite3_free(query);
 		return FENCE_ERR_PREPARE;
 	}
-	LOGD_GEOFENCE("appid[%s] access_type[%d] place_name[%s]", appid, place_info->access_type, place_info->place_name);
+	LOGD_GEOFENCE("appid[%s] access_type[%d] place_name[%s]", place_info->appid, place_info->access_type, place_info->place_name);
 
 	ret = sqlite3_bind_int(state, ++index, place_info->access_type);
 	SQLITE3_RETURN(ret, sqlite3_errmsg(db_info_s.handle), state);
 
-	ret = sqlite3_bind_text(state, ++index, place_name, -1, SQLITE_STATIC);
+	ret = sqlite3_bind_text(state, ++index, place_info->place_name, -1, SQLITE_STATIC);
 	SQLITE3_RETURN(ret, sqlite3_errmsg(db_info_s.handle), state);
 
-	ret = sqlite3_bind_text(state, ++index, appid, -1, SQLITE_STATIC);
+	ret = sqlite3_bind_text(state, ++index, place_info->appid, -1, SQLITE_STATIC);
 	SQLITE3_RETURN(ret, sqlite3_errmsg(db_info_s.handle), state);
 
 	ret = sqlite3_step(state);
 	if (ret != SQLITE_DONE) {
 		LOGI_GEOFENCE("sqlite3_step Error[%d] : %s", ret, sqlite3_errmsg(db_info_s.handle));
 		sqlite3_finalize(state);
-		g_free(place_name);
-		g_free(appid);
 		sqlite3_free(query);
 		return FENCE_ERR_SQLITE_FAIL;
 	}
@@ -818,8 +792,6 @@ int geofence_manager_set_place_info(place_info_s *place_info, int *place_id)
 	sqlite3_reset(state);
 	sqlite3_clear_bindings(state);
 	sqlite3_finalize(state);
-	g_free(place_name);
-	g_free(appid);
 	sqlite3_free(query);
 
 	if (*place_id < 1) {
@@ -839,20 +811,16 @@ int geofence_manager_set_common_info(fence_common_info_s *fence_info, int *fence
 	int ret = SQLITE_OK;
 	int index = 0;
 	const char *tail;
-	char *appid = NULL;
 	char *query = sqlite3_mprintf("INSERT INTO GeoFence (place_id, enable, app_id, geofence_type, access_type, running_status) VALUES (?, ?, ?, ?, ?, ?)");
-	appid = (char *)g_malloc0(sizeof(char) * APP_ID_LEN);
-	g_strlcpy(appid, fence_info->appid, APP_ID_LEN);
 
 	ret = sqlite3_prepare_v2(db_info_s.handle, query, -1, &state, &tail);
 	if (ret != SQLITE_OK) {
 		LOGI_GEOFENCE("Error: %s", sqlite3_errmsg(db_info_s.handle));
-		g_free(appid);
 		sqlite3_free(query);
 		return FENCE_ERR_PREPARE;
 	}
 
-	LOGD_GEOFENCE("place_id[%d], enable[%d], appid[%s] geofence_type[%d] access_type[%d] running_status[%d]", fence_info->place_id, fence_info->enable, appid, fence_info->running_status, fence_info->type, fence_info->access_type, fence_info->place_id);
+	LOGD_GEOFENCE("place_id[%d], enable[%d], appid[%s] geofence_type[%d] access_type[%d] running_status[%d]", fence_info->place_id, fence_info->enable, fence_info->appid, fence_info->running_status, fence_info->type, fence_info->access_type, fence_info->place_id);
 
 	ret = sqlite3_bind_int(state, ++index, fence_info->place_id);
 	SQLITE3_RETURN(ret, sqlite3_errmsg(db_info_s.handle), state);
@@ -860,7 +828,7 @@ int geofence_manager_set_common_info(fence_common_info_s *fence_info, int *fence
 	ret = sqlite3_bind_int(state, ++index, fence_info->enable);
 	SQLITE3_RETURN(ret, sqlite3_errmsg(db_info_s.handle), state);
 
-	ret = sqlite3_bind_text(state, ++index, appid, -1, SQLITE_STATIC);
+	ret = sqlite3_bind_text(state, ++index, fence_info->appid, -1, SQLITE_STATIC);
 	SQLITE3_RETURN(ret, sqlite3_errmsg(db_info_s.handle), state);
 
 	ret = sqlite3_bind_int(state, ++index, fence_info->type);
@@ -876,7 +844,6 @@ int geofence_manager_set_common_info(fence_common_info_s *fence_info, int *fence
 	if (ret != SQLITE_DONE) {
 		LOGI_GEOFENCE("sqlite3_step Error[%d] : %s", ret, sqlite3_errmsg(db_info_s.handle));
 		sqlite3_finalize(state);
-		g_free(appid);
 		sqlite3_free(query);
 		return FENCE_ERR_SQLITE_FAIL;
 	}
@@ -885,7 +852,6 @@ int geofence_manager_set_common_info(fence_common_info_s *fence_info, int *fence
 	sqlite3_reset(state);
 	sqlite3_clear_bindings(state);
 	sqlite3_finalize(state);
-	g_free(appid);
 	sqlite3_free(query);
 
 	if (*fence_id < 1) {
@@ -1101,18 +1067,12 @@ int geofence_manager_update_place_info(int place_id, const char *place_info_name
 	sqlite3_stmt *state = NULL;
 	const char *tail;
 	int ret = SQLITE_OK;
-	char *place_name = NULL;
-
-	place_name = (char *)g_malloc0(sizeof(char) * PLACE_NAME_LEN);
-	g_strlcpy(place_name, place_info_name, PLACE_NAME_LEN);
-
-	char *query = sqlite3_mprintf("UPDATE Places SET place_name = %Q where place_id = %d", place_name, place_id);
+	char *query = sqlite3_mprintf("UPDATE Places SET place_name = %Q where place_id = %d", place_info_name, place_id);
 
 	ret = sqlite3_prepare_v2(db_info_s.handle, query, -1, &state, &tail);
 	if (ret != SQLITE_OK) {
 		LOGI_GEOFENCE("Error: %s", sqlite3_errmsg(db_info_s.handle));
 		sqlite3_free(query);
-		g_free(place_name);
 		return FENCE_ERR_PREPARE;
 	}
 
@@ -1120,13 +1080,11 @@ int geofence_manager_update_place_info(int place_id, const char *place_info_name
 	if (ret != SQLITE_DONE) {
 		LOGI_GEOFENCE("sqlite3_step Error[%d] : %s", ret, sqlite3_errmsg(db_info_s.handle));
 		sqlite3_finalize(state);
-		g_free(place_name);
 		sqlite3_free(query);
 		return FENCE_ERR_SQLITE_FAIL;
 	}
 
 	sqlite3_finalize(state);
-	g_free(place_name);
 	sqlite3_free(query);
 	LOGI_GEOFENCE("place_id: %d has been successfully updated.", place_id);
 	return FENCE_ERR_NONE;
@@ -1268,25 +1226,22 @@ int geofence_manager_get_geocoordinate_info(int fence_id, geocoordinate_info_s *
 
 	data_name = (char *) sqlite3_column_text(state, ++index);
 
-	if (!data_name || !strlen(data_name)) {
+	if (!data_name || !strlen(data_name))
 		LOGI_GEOFENCE("ERROR: data_name is NULL!!!");
-	} else {
+	else
 		(*geocoordinate_info)->latitude = atof(data_name);
-	}
 
 	data_name = (char *) sqlite3_column_text(state, ++index);
-	if (!data_name || !strlen(data_name)) {
+	if (!data_name || !strlen(data_name))
 		LOGI_GEOFENCE("ERROR: data_name is NULL!!!");
-	} else {
+	else
 		(*geocoordinate_info)->longitude = atof(data_name);
-	}
 
 	data_name = (char *) sqlite3_column_text(state, ++index);
-	if (!data_name || !strlen(data_name)) {
+	if (!data_name || !strlen(data_name))
 		LOGI_GEOFENCE("ERROR: data_name is NULL!!!");
-	} else {
+	else
 		(*geocoordinate_info)->radius = atof(data_name);
-	}
 
 	g_strlcpy((*geocoordinate_info)->address, (char *) sqlite3_column_text(state, ++index), ADDRESS_LEN);
 
@@ -1407,11 +1362,10 @@ int geofence_manager_get_place_info(int place_id, place_info_s **place_info)
 	g_return_val_if_fail(*place_info, FENCE_ERR_INVALID_PARAMETER);
 
 	data_name = (char *)sqlite3_column_text(state, ++index);
-	if (!data_name || !strlen(data_name)) {
+	if (!data_name || !strlen(data_name))
 		LOGI_GEOFENCE("ERROR: data_name is NULL!!!");
-	} else {
+	else
 		(*place_info)->access_type = atof(data_name);
-	}
 
 	g_strlcpy((*place_info)->place_name, (char *)sqlite3_column_text(state,	++index), PLACE_NAME_LEN);
 	g_strlcpy((*place_info)->appid, (char *)sqlite3_column_text(state, ++index), APP_ID_LEN);
@@ -1706,11 +1660,10 @@ int geofence_manager_get_place_name(int place_id, char **name)
 	}
 
 	tmp = (char *) sqlite3_column_text(state, 0);
-	if (!tmp || !strlen(tmp)) {
+	if (!tmp || !strlen(tmp))
 		LOGI_GEOFENCE("ERROR: name is NULL!!!");
-	} else {
+	else
 		*name = g_strdup(tmp);
-	}
 
 	sqlite3_finalize(state);
 	sqlite3_free(query);
@@ -1787,11 +1740,10 @@ int geofence_manager_get_appid_from_places(int place_id, char **appid)
 	}
 
 	id = (char *) sqlite3_column_text(state, 0);
-	if (!id || !strlen(id)) {
+	if (!id || !strlen(id))
 		LOGI_GEOFENCE("ERROR: appid is NULL!!!");
-	} else {
+	else
 		*appid = g_strdup(id);
-	}
 
 	sqlite3_finalize(state);
 	sqlite3_free(query);
@@ -1866,11 +1818,10 @@ int geofence_manager_get_appid_from_geofence(int fence_id, char **appid)
 	}
 
 	id = (char *) sqlite3_column_text(state, 0);
-	if (!id || !strlen(id)) {
+	if (!id || !strlen(id))
 		LOGI_GEOFENCE("ERROR: appid is NULL!!!");
-	} else {
+	else
 		*appid = g_strdup(id);
-	}
 
 	sqlite3_finalize(state);
 	sqlite3_free(query);
@@ -1946,11 +1897,10 @@ int geofence_manager_get_ble_info_from_geofence(int fence_id, char **ble_info)
 	}
 
 	info = (char *) sqlite3_column_text(state, 0);
-	if (!info || !strlen(info)) {
+	if (!info || !strlen(info))
 		LOGI_GEOFENCE("ERROR: ble info is NULL!!!");
-	} else {
+	else
 		*ble_info = g_strdup(info);
-	}
 
 	sqlite3_finalize(state);
 	sqlite3_free(query);
@@ -2415,9 +2365,8 @@ int geofence_manager_close_db(void)
 	FUNC_ENTRANCE_SERVER;
 	int ret = SQLITE_OK;
 
-	if (db_info_s.handle == NULL) {
+	if (db_info_s.handle == NULL)
 		return FENCE_ERR_NONE;
-	}
 
 	ret = db_util_close(db_info_s.handle);
 	if (ret != SQLITE_OK) {

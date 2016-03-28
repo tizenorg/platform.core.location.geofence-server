@@ -122,9 +122,8 @@ static void emit_wifi_geofence_proximity_changed(GeofenceServer *geofence_server
 				LOGD_GEOFENCE("WIFI Fence. Scanning for BLE and storing in DB");
 				g_stpcpy(geofence_server->ble_info, "");
 				ret = bt_adapter_le_start_scan(bt_le_scan_result_cb, geofence_server);
-				if (ret != BT_ERROR_NONE) {
+				if (ret != BT_ERROR_NONE)
 					LOGE_GEOFENCE("Fail to start ble scan. %d", ret);
-				}
 			} else if (item_data->common_info.proximity_status == GEOFENCE_PROXIMITY_IMMEDIATE) { /* Stopping the scan if state changes from imm to somethingelse */
 				ret = bt_adapter_le_stop_scan();
 				if (ret != BT_ERROR_NONE)
