@@ -339,44 +339,38 @@ int _geofence_deinitialize_geofence_server()
 	/* to denit geofence engine staff...*/
 
 	/* unset bluetooth device connection state changed state event callback*/
-	if (bt_device_unset_connection_state_changed_cb() != BT_ERROR_NONE) {
+	if (bt_device_unset_connection_state_changed_cb() != BT_ERROR_NONE)
 		LOGD_GEOFENCE("bt_device_unset_connection_state_changed_cb() failed.\n");
-	} else {
+	else
 		LOGD_GEOFENCE("bt_device_unset_connection_state_changed_cb() success.\n");
-	}
 
 	/* unset bluetooth adapter changed state event callback*/
-	if (bt_adapter_unset_state_changed_cb() != BT_ERROR_NONE) {
+	if (bt_adapter_unset_state_changed_cb() != BT_ERROR_NONE)
 		LOGD_GEOFENCE("bt_adapter_unset_state_changed_cb() failed.\n");
-	} else {
+	else
 		LOGD_GEOFENCE("bt_adapter_unset_state_changed_cb() success.\n");
-	}
 
 	/* deinit bluetooth api*/
-	if (bt_deinitialize() != BT_ERROR_NONE) {
+	if (bt_deinitialize() != BT_ERROR_NONE)
 		LOGD_GEOFENCE("bt_deinitialize() failed.\n");
-	} else {
+	else
 		LOGD_GEOFENCE("bt_deinitialize() success.\n");
-	}
 
 	/*unset the callbacks related to wifi*/
-	if (wifi_unset_connection_state_changed_cb() != WIFI_ERROR_NONE) {
+	if (wifi_unset_connection_state_changed_cb() != WIFI_ERROR_NONE)
 		LOGD_GEOFENCE("wifi_unset_connection_state_changed_cb() failed.\n");
-	} else {
+	else
 		LOGD_GEOFENCE("wifi_unset_connection_state_changed_cb() success.\n");
-	}
 
-	if (wifi_deinitialize() != WIFI_ERROR_NONE) {
+	if (wifi_deinitialize() != WIFI_ERROR_NONE)
 		LOGD_GEOFENCE("wifi_deinitialize() failed.\n");
-	} else {
+	else
 		LOGD_GEOFENCE("wifi_deinitialize() success.\n");
-	}
 
-	if (location_manager_unset_setting_changed_cb(LOCATIONS_METHOD_GPS) != LOCATIONS_ERROR_NONE) {
+	if (location_manager_unset_setting_changed_cb(LOCATIONS_METHOD_GPS) != LOCATIONS_ERROR_NONE)
 		LOGD_GEOFENCE("GPS unsetting failed\n");
-	} else {
+	else
 		LOGD_GEOFENCE("GPS unsetting success\n");
-	}
 #if USE_TAPI
 	__deinitialize_geofence_data();
 #endif
