@@ -347,9 +347,11 @@ EXPORT_API int get_places(void *handle, int *place_amount, int **place_ids, plac
 		index++;
 		g_variant_iter_free(iter_row);
 	}
-	g_variant_iter_free(iter);
-	*params = (place_s *)p;
 
+	if (iter != NULL)
+		g_variant_iter_free(iter);
+
+	*params = (place_s *)p;
 	*place_ids = place_id_array;
 
 	return GEOFENCE_MANAGER_ERROR_NONE;
