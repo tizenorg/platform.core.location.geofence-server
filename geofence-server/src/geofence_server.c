@@ -282,8 +282,8 @@ static int __emit_fence_event(GeofenceServer *geofence_server, int place_id, int
 	FUNC_ENTRANCE_SERVER;
 	g_return_val_if_fail(geofence_server, -1);
 
-	LOGD_GEOFENCE("place_id: %d, fence_id: %d, access_type: %d, error: %d, state: %d", place_id, fence_id, access_type, error, state);
 
+	LOGD_GEOFENCE("place_id: %d, fence_id: %d, access_type: %d, error: %d, state: %d", place_id, fence_id, access_type, error, state);
 	geofence_dbus_server_send_geofence_event_changed(geofence_server->geofence_dbus_server, place_id, fence_id, access_type, app_id, error, state);
 	return 0;
 }
@@ -1689,10 +1689,11 @@ static int dbus_add_place_cb(const gchar *app_id, const gchar *place_name, gpoin
 	if (ret != FENCE_ERR_NONE) {
 		LOGI_GEOFENCE("Unable to add the place due to DB error");
 		__emit_fence_event(geofence_server, -1, -1, ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_DATABASE, GEOFENCE_MANAGE_PLACE_ADDED);
+		g_free(place_info);
 		return -1;
 	}
 	__emit_fence_event(geofence_server, place_id, -1, place_info->access_type, app_id, GEOFENCE_SERVER_ERROR_NONE, GEOFENCE_MANAGE_PLACE_ADDED);
-
+	g_free(place_info);
 	return place_id;
 }
 
@@ -2608,6 +2609,7 @@ static void __add_default_place(char *place_name)
 	int ret = geofence_manager_set_place_info(place_info, &place_id);
 	if (ret != FENCE_ERR_NONE)
 		LOGI_GEOFENCE("Unable to add the default places due to DB error");
+	g_free(place_info);
 }
 
 static void __init_geofencemanager(GeofenceServer *geofence_server)
