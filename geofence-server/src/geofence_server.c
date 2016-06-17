@@ -1757,17 +1757,13 @@ static void dbus_update_place_cb(gint place_id, const gchar *app_id, const gchar
 		return;
 	}
 
-	place_info_s *place_info = (place_info_s *) g_malloc0(sizeof(place_info_s));
-	if (place_info == NULL) {
-		LOGI_GEOFENCE("malloc fail for place id[%d]", place_id);
-		__emit_fence_event(geofence_server, place_id, -1, ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_OUT_OF_MEMORY, GEOFENCE_MANAGE_PLACE_UPDATED);
-		return;
-	}
+	place_info_s *place_info = NULL;
 	ret = geofence_manager_get_place_info(place_id, &place_info);
-	if (ret != FENCE_ERR_NONE) {
+	if (ret != FENCE_ERR_NONE || place_info == NULL) {
 		LOGI_GEOFENCE("Place_id does not exist or DB error in getting the place info for place_id[%d].", place_id);
 		__emit_fence_event(geofence_server, place_id, -1, ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_ID_NOT_EXIST, GEOFENCE_MANAGE_PLACE_UPDATED);
-		g_free(place_info);
+		if (place_info != NULL)
+			g_free(place_info);
 		return;
 	}
 	if (g_strcmp0(app_id, place_info->appid) != 0) {
@@ -1929,13 +1925,13 @@ static void dbus_remove_place_cb(gint place_id, const gchar *app_id, gpointer us
 		return;
 	}
 
-	place_info_s *place_info =
-	    (place_info_s *) g_malloc0(sizeof(place_info_s));
+	place_info_s *place_info = NULL;
 	ret = geofence_manager_get_place_info(place_id, &place_info);
-	if (ret != FENCE_ERR_NONE) {
+	if (ret != FENCE_ERR_NONE || place_info == NULL) {
 		LOGI_GEOFENCE("Place_id does not exist or DB error in getting the place info for place_id[%d].", place_id);
 		__emit_fence_event(geofence_server, place_id, -1, ACCESS_TYPE_UNKNOWN, app_id, GEOFENCE_SERVER_ERROR_ID_NOT_EXIST, GEOFENCE_MANAGE_PLACE_REMOVED);
-		g_free(place_info);
+		if (place_info != NULL)
+			g_free(place_info);
 		return;
 	}
 	if (g_strcmp0(app_id, place_info->appid) != 0) {
@@ -2434,12 +2430,14 @@ static GVariant *dbus_get_geofences_cb(int place_id, const gchar *app_id, int *f
 		ret = geofence_manager_get_fence_list_from_db(&count, &fence_list, -1);
 	} else {
 		ret = geofence_manager_get_place_info(place_id, &place_info);
-		if (ret != FENCE_ERR_NONE) {
+		if (ret != FENCE_ERR_NONE || place_info == NULL) {
 			LOGE("Error getting the place info for place_id[%d]", place_id);
 			/* Send ZERO data gvariant*/
 			*errorCode = GEOFENCE_SERVER_ERROR_DATABASE;
 			*fenceCnt = fence_cnt;
 			g_variant_builder_init(&b, G_VARIANT_TYPE("aa{sv}"));
+			if (place_info != NULL)
+				g_free(place_info);
 			return g_variant_builder_end(&b);
 		}
 		if ((place_info != NULL) && (place_info->access_type == ACCESS_TYPE_PRIVATE)) {
