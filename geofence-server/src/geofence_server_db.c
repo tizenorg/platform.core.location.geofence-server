@@ -1359,7 +1359,7 @@ int geofence_manager_get_place_info(int place_id, place_info_s **place_info)
 		return FENCE_ERR_SQLITE_FAIL;
 	}
 	*place_info = (place_info_s *)g_malloc0(sizeof(place_info_s));
-	g_return_val_if_fail(*place_info, FENCE_ERR_INVALID_PARAMETER);
+	g_return_val_if_fail(*place_info, FENCE_ERR_INTERNAL);
 
 	data_name = (char *)sqlite3_column_text(state, ++index);
 	if (!data_name || !strlen(data_name))
