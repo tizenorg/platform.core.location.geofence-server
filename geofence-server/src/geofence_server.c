@@ -842,7 +842,7 @@ static void __geofence_wps_position_changed_cb(double latitude, double longitude
 
 	/* Allocate memory for the location_info structure */
 	if (geofence_server->wps_fix_info == NULL)
-		geofence_server->wps_fix_info = (location_fix_info_s *)g_malloc(sizeof(location_fix_info_s));
+		geofence_server->wps_fix_info = (location_fix_info_s *)g_malloc0(sizeof(location_fix_info_s));
 	 /*Remove the timeout callback that might be running when requesting for fix.*/
 	if (geofence_server->wps_timeout_alarm_id != -1) {
 		/*LOGI_GEOFENCE("Removing the timeout alarm from restart gps");*/
